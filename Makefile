@@ -18,9 +18,9 @@ RESET=`tput sgr0`
 YELLOW=`tput setaf 3`
 
 # Current version
-MAIN_IMAGE_NAME=plone/plone-backend
-CLASSICUI_IMAGE_NAME=plone/plone-classicui
-BASE_IMAGE_NAME=plone/server
+MAIN_IMAGE_NAME=codesyntax/plone-backend
+CLASSICUI_IMAGE_NAME=codesyntax/plone-classicui
+BASE_IMAGE_NAME=codesyntax/server
 PLONE_VERSION=$$(cat version.txt)
 PYTHON_VERSION=3.12
 IMAGE_TAG=${PLONE_VERSION}
