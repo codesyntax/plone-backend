@@ -1,73 +1,25 @@
-<p align="center">
-    <img alt="Plone Logo" width="200px" src="https://raw.githubusercontent.com/plone/plone-backend/5.2.x/docs/logo.png">
-</p>
+# Custom plone/plone-backend images
 
-<h1 align="center">
-  plone/plone-backend
-</h1>
+These are custom Plone docker images.
 
-<div align="center">
+They address some issues found in original [plone/plone-backend](https://github.com/plone/plone-backend) images that are already merged but not released, and some others that are not merged yet.
 
-[![Docker Image Version (latest semver)](https://img.shields.io/docker/v/plone/plone-backend?sort=semver)](https://hub.docker.com/r/plone/plone-backend)
-[![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/plone/plone-backend?sort=semver)](https://hub.docker.com/r/plone/plone-backend)
+The purpose of the repository is to have a public container registry in order to base our deployment images on them.
 
-![GitHub Repo stars](https://img.shields.io/github/stars/plone/plone-backend?style=flat-square)
-[![license badge](https://img.shields.io/github/license/plone/plone-backend)](./LICENSE)
+The generated docker images are:
 
-</div>
+- ghcr.io/codesyntax/plone-backend/server-builder
+- ghcr.io/codesyntax/plone-backend/server-prod-config
+- ghcr.io/codesyntax/plone-backend/plone-backend
 
-Plone backend [Docker](https://docker.com) images using Python 3 and [pip](https://pip.pypa.io/en/stable/).
+The issues included here are:
 
-**Note:**
-These are the official images for the [Plone 6](https://plone.org/) release, together with [plone-frontend](https://github.com/plone/plone-frontend).
-These images are **not** Buildout based!
+Merged but not released:
 
-## Tags
-### Supported tags and respective Dockerfile links
+- CLIENTHOME as env var: https://github.com/plone/plone-backend/pull/176
+- Add zopeuser command to docker-entrypoint https://github.com/plone/plone-backend/pull/175 https://github.com/plone/plone-backend/pull/178
+- SITE_LANGUAGE environmnet var: https://github.com/plone/plone-backend/pull/170
 
-| Plone Version | Tags | Dockerfile |
-| --- | --- | --- |
-| 6 | `6.0.14`, `6.0`, `6`, `latest` | [(6.0.x/Dockerfile)](https://github.com/plone/plone-backend/blob/v6.0.14/Dockerfile)|
-| 6.1 | `6.1.2`, `6.1` | [(6.1.x/Dockerfile)](https://github.com/plone/plone-backend/blob/v6.1.2/Dockerfile)|
-| 6 (nightly) | `nightly` |  [(Dockerfile.nightly)](https://github.com/plone/plone-backend/blob/6.0.x/Dockerfile.nightly) |
+Unmerged:
 
-**Possible breaking changes in upcoming Plone 6.1 dependencies**
-
-Please note that the backend images in the 6.1.x series have several updated dependencies, which you should verify and test before using them in any existing project. Even if you extend from these images. The underlying OS has been switched from Debian 11 buster to 12 bookworm. Python is updated from 
-3.11 to 3.12. Relstorage has a new major release going from 3.x to 4.1. And there are are minor updates for libldap, libtiff and psycopg2 OS and Python libraries.
-
-### Unsupported tags
-
-**Note:**
-These images for Plone 5 are **not** officially supported by the Plone community.
-
-
-| Plone Version | Tags | Dockerfile |
-| --- | --- | --- |
-| 5.2 | `5`, `5.2`, `5.2.14` | [(5.2.x/Dockerfile)](https://github.com/plone/plone-backend/blob/v5.2.14/Dockerfile) |
-
-
- See also the official [Buildout-based Plone 5 images](https://hub.docker.com/_/plone).
-
-## Usage
-
-Please refer to the [Official Plone Documentation](https://6.docs.plone.org/install/containers/images/backend.html) for further documentation and examples.
-
-## Contribute
-
-- [Issue Tracker](https://github.com/plone/plone-backend/issues)
-- [Source Code](https://github.com/plone/plone-backend/)
-- [Documentation](https://6.docs.plone.org/install/containers/images/backend.html)
-
-Please **DO NOT** commit to version branches directly. Even for the smallest and most trivial fix.
-**ALWAYS** open a pull request and ask somebody else to merge your code. **NEVER** merge it yourself.
-
-## Credits
-
-This project is supported by:
-
-[![Plone Foundation](https://raw.githubusercontent.com/plone/.github/main/plone-foundation.png)](https://plone.org/)
-
-## License
-
-The project is licensed under GPLv2.
+- Do not do a `find & chown` for all files in /data: https://github.com/plone/plone-backend/issues/172
