@@ -14,12 +14,6 @@ The generated docker images are:
 
 The issues included here are:
 
-Merged but not released:
-
-- CLIENTHOME as env var: https://github.com/plone/plone-backend/pull/176
-- Add zopeuser command to docker-entrypoint https://github.com/plone/plone-backend/pull/175 https://github.com/plone/plone-backend/pull/178
-- SITE_LANGUAGE environmnet var: https://github.com/plone/plone-backend/pull/170
-
 Unmerged:
 
 - Do not do a `find & chown` for all files in /data: https://github.com/plone/plone-backend/issues/172
