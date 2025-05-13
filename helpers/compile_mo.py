@@ -1,4 +1,5 @@
 """Helper script to pre-compile PO files in a Plone backend builder image."""
+
 from pathlib import Path
 from pythongettext.msgfmt import Msgfmt
 from pythongettext.msgfmt import PoSyntaxError
