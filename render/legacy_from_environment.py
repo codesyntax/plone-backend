@@ -101,26 +101,26 @@ _ZEO = (
     ("ZEO_DROP_CACHE_RATHER_VERIFY", "db_zeo_drop_cache_rather_verify", _as_bool, "false"),
 )
 
-#: ``(legacy name, INSTANCE_* key, value transform)``; the baked instance.yaml
-#: already provides the legacy defaults, so none are filled here.
+#: ``(legacy name, INSTANCE_* key, value transform, legacy default)``. A ``None``
+#: default means the entry is only translated when the legacy variable is set.
 _BEHAVIOUR = (
-    ("DEBUG_MODE", "debug_mode", _as_bool),
-    ("VERBOSE_SECURITY", "verbose_security", _as_bool),
-    ("COMPILE_MO_FILES", "environment_DICT_zope_i18n_compile_mo_files", _as_bool),
-    ("CHAMELEON_CACHE", "environment_DICT_CHAMELEON_CACHE", None),
-    ("ZOPE_FORM_MEMORY_LIMIT", "dos_protection_form_memory_limit", None),
-    ("ZOPE_FORM_DISK_LIMIT", "dos_protection_form_disk_limit", None),
-    ("ZOPE_FORM_MEMFILE_LIMIT", "dos_protection_form_memfile_limit", None),
-    ("ZODB_CACHE_SIZE", "db_cache_size", None),
+    ("DEBUG_MODE", "debug_mode", _as_bool, None),
+    ("VERBOSE_SECURITY", "verbose_security", _as_bool, None),
+    ("COMPILE_MO_FILES", "environment_DICT_zope_i18n_compile_mo_files", _as_bool, None),
+    ("CHAMELEON_CACHE", "environment_DICT_CHAMELEON_CACHE", None, None),
+    ("ZOPE_FORM_MEMORY_LIMIT", "dos_protection_form_memory_limit", None, None),
+    ("ZOPE_FORM_DISK_LIMIT", "dos_protection_form_disk_limit", None, None),
+    ("ZOPE_FORM_MEMFILE_LIMIT", "dos_protection_form_memfile_limit", None, None),
+    ("ZODB_CACHE_SIZE", "db_cache_size", None, None),
 )
 
 _CORS = (
-    ("CORS_ALLOW_ORIGIN", "cors_allow_origin", None),
-    ("CORS_ALLOW_METHODS", "cors_allow_methods", None),
-    ("CORS_ALLOW_CREDENTIALS", "cors_allow_credentials", _as_bool),
-    ("CORS_EXPOSE_HEADERS", "cors_expose_headers", None),
-    ("CORS_ALLOW_HEADERS", "cors_allow_headers", None),
-    ("CORS_MAX_AGE", "cors_max_age", None),
+    ("CORS_ALLOW_ORIGIN", "cors_allow_origin", None, None),
+    ("CORS_ALLOW_METHODS", "cors_allow_methods", None, None),
+    ("CORS_ALLOW_CREDENTIALS", "cors_allow_credentials", _as_bool, None),
+    ("CORS_EXPOSE_HEADERS", "cors_expose_headers", None, None),
+    ("CORS_ALLOW_HEADERS", "cors_allow_headers", None, None),
+    ("CORS_MAX_AGE", "cors_max_age", None, None),
 )
 
 
@@ -146,10 +146,13 @@ def _backend() -> tuple[str, bool]:
     return "direct", False
 
 
-def _apply(table, fill_defaults: bool) -> None:
-    """Translate one backend family. Only translate the active family: mapping
-    another family's keys (e.g. a RelStorage blob mode onto direct) produces an
-    invalid combination."""
+def _translate(table, fill_defaults: bool = False) -> None:
+    """Translate a ``(name, key, transform, default)`` table.
+
+    Only translate the active entries. For the backend tables, ``fill_defaults``
+    fills the legacy defaults for parity when the legacy variable selected the
+    backend; behaviour and CORS entries have no default.
+    """
     for name, key, transform, default in table:
         if name in os.environ:
             _mark(name)
@@ -161,24 +164,14 @@ def _apply(table, fill_defaults: bool) -> None:
         _set(key, transform(value) if transform else value)
 
 
-def _apply_optional(table) -> None:
-    """Translate the entries of a ``(name, key, transform)`` table that are set."""
-    for name, key, transform in table:
-        if name not in os.environ:
-            continue
-        _mark(name)
-        value = os.environ[name]
-        _set(key, transform(value) if transform else value)
-
-
 def _map_backend() -> None:
     backend, legacy_selected = _backend()
     if legacy_selected and backend in ("relstorage", "zeo"):
         _set("db_storage", backend)
     if backend == "relstorage":
-        _apply(_RELSTORAGE, fill_defaults=legacy_selected)
+        _translate(_RELSTORAGE, fill_defaults=legacy_selected)
     elif backend == "zeo":
-        _apply(_ZEO, fill_defaults=legacy_selected)
+        _translate(_ZEO, fill_defaults=legacy_selected)
 
 
 def _map_paths() -> None:
@@ -193,7 +186,7 @@ def _map_paths() -> None:
 def _map_cors() -> None:
     if not any(name in os.environ for name, *_ in _CORS):
         return
-    _apply_optional(_CORS)
+    _translate(_CORS)
     # The legacy trigger was "any CORS_* present", not an explicit flag.
     _set("cors_enabled", "true")
 
@@ -201,9 +194,13 @@ def _map_cors() -> None:
 def _map_breakages() -> None:
     """Accepted breakages: document/default, never emulate (decision ticket 03)."""
     policy = os.environ.get("SECURITY_POLICY_IMPLEMENTATION")
-    if policy is not None and policy.strip().lower() != "c":
-        _mark("SECURITY_POLICY_IMPLEMENTATION")
-        _set("verbose_security", "true")
+    if policy is not None:
+        normalized = policy.strip().upper()
+        if normalized == "PYTHON":
+            _mark("SECURITY_POLICY_IMPLEMENTATION")
+            _set("verbose_security", "true")
+        elif normalized != "C":
+            _mark("SECURITY_POLICY_IMPLEMENTATION")
     encoding = os.environ.get("DEFAULT_ZPUBLISHER_ENCODING")
     if encoding is not None and encoding.strip().lower() != "utf-8":
         _breakages.append(
@@ -214,7 +211,7 @@ def _map_breakages() -> None:
 
 def main() -> int:
     _map_backend()
-    _apply_optional(_BEHAVIOUR)
+    _translate(_BEHAVIOUR)
     _map_paths()
     _map_cors()
     _map_breakages()

@@ -9,7 +9,7 @@ vname="/tmp/plone-render-$RANDOM-$RANDOM"
 vuser="/tmp/plone-render-user-$RANDOM-$RANDOM"
 mkdir -p "$vname" "$vuser"
 cleanup() {
-	docker rm -vf "$cname" > /dev/null 2>&1 || true
+	docker rm -vf "$cname" "$ucname" > /dev/null 2>&1 || true
 	if [ -d "$vname" ]; then
 		# The rendered files are owned by the in-image plone user, so clear them
 		# from inside a (root) container before removing the host directory.
@@ -80,3 +80,19 @@ get() {
 
 # Plone is up and running from the rendered instance.
 [[ "$(get 'http://plone:8080')" == *"Welcome to Plone!"* ]]
+
+# 4. Boot the rendered instance as an arbitrary user with only /data writable.
+ucname="plone-render-user-$RANDOM-$RANDOM"
+docker run -d --user="$(id -u)" -v "$vuser:/data" --name "$ucname" \
+	-e CLIENT_HOME=/data/render-test -e PLONE_RENDER=on "$image" start > /dev/null
+
+get_user() {
+	docker run --rm -i \
+		--link "$ucname":plone \
+		--entrypoint /app/bin/python \
+		"$image" \
+		-c "from urllib.request import urlopen; con = urlopen('$1'); print(con.read())"
+}
+
+. "$dir/../../retry.sh" --tries "$PLONE_TEST_TRIES" --sleep "$PLONE_TEST_SLEEP" get_user "http://plone:8080"
+[[ "$(get_user 'http://plone:8080')" == *"Welcome to Plone!"* ]]
