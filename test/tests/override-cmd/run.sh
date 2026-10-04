@@ -24,6 +24,7 @@ testOutput="$(tr -d '\r' <<<"$testOutput")" # Windows gives us \r\n ...  :D
 [ "$testOutput" = "Hello $hello" ]
 
 # now test with normal command to verify the default entrypoint is OK
-output="$(docker run --rm "$image" "${cmd[@]}")"
+# (and that a custom command passthrough does not trigger a render)
+output="$(docker run --rm -e PLONE_RENDER=on "$image" "${cmd[@]}")"
 output="$(tr -d '\r' <<<"$output")" # Windows gives us \r\n ...  :D
 [ "$output" = "Hello $hello" ]

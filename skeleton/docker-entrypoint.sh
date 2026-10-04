@@ -181,24 +181,35 @@ render_instance() {
     --config-file "$CLIENT_HOME/instance-from-environment.yaml" \
     /app/render/cookiecutter-zope-instance.zip \
     -o "$CLIENT_HOME"
+  RENDERED_ETC="$CLIENT_HOME/instance/etc"
+}
+
+site_banner() {
+  echo "======================================================================================="
+  echo "Creating Plone ${TYPE} SITE: ${SITE}"
+  echo "Aditional profiles: ${PROFILES}"
+  echo "THIS IS NOT MEANT TO BE USED IN PRODUCTION"
+  echo "Read about it: https://6.docs.plone.org/install/containers/images/backend.html"
+  echo "======================================================================================="
 }
 
 if [[ "$1" == "start" ]]; then
   if [[ -n "$render_enabled" ]]; then
     render_instance
+    if [[ -v SITE ]]; then
+      export TYPE=${TYPE:-volto}
+      export SITE_ID=${SITE}
+      site_banner
+      $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" /app/scripts/create_site.py
+    fi
     echo "Starting Zope from the rendered instance in $CLIENT_HOME/instance"
-    exec $sudo $VENVBIN/runwsgi -v "$CLIENT_HOME/instance/etc/zope.ini"
+    exec $sudo $VENVBIN/runwsgi -v "$RENDERED_ETC/zope.ini"
   fi
   # Handle Site creation
   if [[ -v SITE ]]; then
     export TYPE=${TYPE:-volto}
-    echo "======================================================================================="
-    echo "Creating Plone ${TYPE} SITE: ${SITE}"
-    echo "Aditional profiles: ${PROFILES}"
-    echo "THIS IS NOT MEANT TO BE USED IN PRODUCTION"
-    echo "Read about it: https://6.docs.plone.org/install/containers/images/backend.html"
-    echo "======================================================================================="
     export SITE_ID=${SITE}
+    site_banner
     $sudo $VENVBIN/zconsole run etc/${CONF} /app/scripts/create_site.py
   fi
   echo $MSG
@@ -208,22 +219,50 @@ if [[ "$1" == "start" ]]; then
     sed -i "s/port = 8080/port = ${LISTEN_PORT}/" etc/zope.ini
   fi
   exec $sudo $VENVBIN/runwsgi -v etc/zope.ini config_file=${CONF}
-elif  [[ "$1" == "create-classic" ]]; then
-  export TYPE=classic
+elif [[ "$1" == "create-classic" || "$1" == "create-volto" || "$1" == "create-site" ]]; then
+  case "$1" in
+    create-classic) export TYPE=classic ;;
+    create-volto) export TYPE=volto ;;
+    create-site) export TYPE=${TYPE:-volto} ;;
+  esac
+  if [[ -n "$render_path" ]]; then
+    render_instance
+    exec $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" /app/scripts/create_site.py
+  fi
   exec $sudo $VENVBIN/zconsole run etc/${CONF} /app/scripts/create_site.py
-elif  [[ "$1" == "create-volto" ]]; then
-  export TYPE=volto
-  exec $sudo $VENVBIN/zconsole run etc/${CONF} /app/scripts/create_site.py
-elif  [[ "$1" == "create-site" ]]; then
-  export TYPE=${TYPE:-volto}
-  exec $sudo $VENVBIN/zconsole run etc/${CONF} /app/scripts/create_site.py
-elif  [[ "$1" == "console" ]]; then
+elif [[ "$1" == "console" ]]; then
+  if [[ -n "$render_path" ]]; then
+    render_instance
+    exec $sudo $VENVBIN/zconsole debug "$RENDERED_ETC/zope.conf"
+  fi
   exec $sudo $VENVBIN/zconsole debug etc/${CONF}
-elif  [[ "$1" == "run" ]]; then
+elif [[ "$1" == "run" ]]; then
+  if [[ -n "$render_path" ]]; then
+    render_instance
+    exec $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" "${@:2}"
+  fi
   exec $sudo $VENVBIN/zconsole run etc/${CONF} "${@:2}"
-elif  [[ "$1" == "addzopeuser" ]]; then
+elif [[ "$1" == "addzopeuser" ]]; then
+  if [[ -n "$render_path" ]]; then
+    render_instance
+    exec $sudo $VENVBIN/addzopeuser -c "$RENDERED_ETC/zope.conf" "${@:2}"
+  fi
   exec $sudo $VENVBIN/addzopeuser -c etc/${CONF} "${@:2}"
-elif  [[ "$1" == "pack" ]]; then
+elif [[ "$1" == "pack" ]]; then
+  if [[ -n "$render_path" ]]; then
+    render_instance
+    case "${INSTANCE_db_storage:-direct}" in
+      zeo)
+        exec $sudo $VENVBIN/zeopack "${@:2}" "${ZEO_ADDRESS:-$INSTANCE_db_zeo_server}"
+        ;;
+      relstorage)
+        exec $sudo $VENVBIN/zodbpack "${@:2}" "$RENDERED_ETC/relstorage-pack.conf"
+        ;;
+      *)
+        exec $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" /app/scripts/pack.py
+        ;;
+    esac
+  fi
   if [[ -v ZEO_ADDRESS ]]; then
     exec $sudo $VENVBIN/zeopack "${@:2}" ${ZEO_ADDRESS}
   elif [[ -v RELSTORAGE_DSN ]]; then
@@ -231,7 +270,7 @@ elif  [[ "$1" == "pack" ]]; then
   else
     exec $sudo $VENVBIN/zconsole run etc/${CONF} /app/scripts/pack.py
   fi
-elif  [[ "$1" == "render" ]]; then
+elif [[ "$1" == "render" ]]; then
   render_instance
   exit 0
 else

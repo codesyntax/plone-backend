@@ -34,6 +34,8 @@ grep -q '<relstorage>' "$conf"
 grep -q "dsn dbname='plone'" "$conf"
 # RELSTORAGE_SHARED_BLOB_DIR defaults to false, i.e. the cache blob mode.
 grep -q 'shared-blob-dir false' "$conf"
+# The template renders the RelStorage pack configuration alongside zope.conf.
+test -f "$vname/relstorage/instance/etc/relstorage-pack.conf"
 
 # Behaviour, path and listen-port variables render into the instance.
 behaviour_out="$(docker run --rm -v "$vname:/data" -e CLIENT_HOME=/data/behaviour \

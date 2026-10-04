@@ -8,7 +8,9 @@ globalTests+=(
 imageTests_main_set='
 plone-basics
 plone-develop
+plone-autoinclude
 plone-site
+plone-create-site
 plone-addons
 plone-cors
 plone-arbitrary-user
@@ -19,6 +21,8 @@ plone-shared-blob-dir
 plone-render
 plone-legacy-shim
 plone-merge
+plone-pack
+plone-subcommands
 '
 
 imageTests+=(
