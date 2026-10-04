@@ -32,3 +32,6 @@ get() {
 
 # Plone is up and running
 [[ "$(get 'http://plone:8080')" == *"Welcome to Plone!"* ]]
+
+# Packing works against the rendered ZEO instance.
+docker exec "$pname" /app/docker-entrypoint.sh pack > /dev/null 2>&1

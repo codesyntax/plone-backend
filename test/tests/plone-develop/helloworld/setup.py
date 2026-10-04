@@ -11,6 +11,7 @@ setup(name="helloworld",
       url='https://github.com/plone/container-backend',
       license='GPL version 2',
       packages=['helloworld'],
+      package_data={'helloworld': ['*.zcml']},
       include_package_data=True,
       zip_safe=False,
       install_requires=[

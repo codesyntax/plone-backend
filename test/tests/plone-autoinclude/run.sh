@@ -6,18 +6,24 @@ dir="$(dirname "$(readlink -f "$BASH_SOURCE")")"
 image="$1"
 
 # Reuse the DEVELOP fixture, which declares a z3c.autoinclude.plugin entry point
-# and now ships a configure.zcml with a browser page.
-fixture="$dir/../plone-develop/helloworld"
+# and ships a configure.zcml with a browser page. Install it via ADDONS (not
+# DEVELOP) to prove that an ADDONS-installed add-on's ZCML is registered.
+src="$dir/../plone-develop/helloworld"
+sdir="$(mktemp -d)"
+chmod 755 "$sdir"
+cp -r "$src" "$sdir/helloworld"
 
 cname="plone-autoinclude-$RANDOM-$RANDOM"
-docker run -d --name "$cname" -v "$fixture:/app/src/helloworld" \
-	-e DEVELOP="/app/src/helloworld" \
-	-e PIP_PARAMS="-q --disable-pip-version-check" \
-	-e PLONE_RENDER=on "$image" start > /dev/null
 cleanup() {
 	docker rm -vf "$cname" > /dev/null 2>&1 || true
+	rm -rf "$sdir" > /dev/null 2>&1 || true
 }
 trap cleanup EXIT
+
+docker run -d --name "$cname" -v "$sdir/helloworld:/app/src/helloworld" \
+	-e ADDONS="/app/src/helloworld" \
+	-e PIP_PARAMS="-q --disable-pip-version-check --no-build-isolation" \
+	-e PLONE_RENDER=on "$image" start > /dev/null
 
 get() {
 	docker run --rm -i \
