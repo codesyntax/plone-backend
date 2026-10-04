@@ -12,11 +12,17 @@ ufile="$udir/instance.yaml"
 cat > "$ufile" <<'YAML'
 default_context:
     wsgi_threads: 8
+    dos_protection_form_memory_limit: 99MB
+    environment:
+        PTS_LANGUAGES: "de en"
     logging_loggers:
         plone: DEBUG
 YAML
+cnames=()
 cleanup() {
-	docker rm -vf "$cname" > /dev/null 2>&1 || true
+	for c in "${cnames[@]}"; do
+		docker rm -vf "$c" > /dev/null 2>&1 || true
+	done
 	if [ -d "$vname" ]; then
 		docker run --rm -v "$vname:/data" --entrypoint sh "$image" \
 			-c 'rm -rf /data/* /data/.[!.]*' > /dev/null 2>&1 || true
@@ -29,11 +35,13 @@ trap cleanup EXIT
 docker run --rm -v "$vname:/data" -v "$ufile:/app/instance.yaml:ro" \
 	-e CLIENT_HOME=/data/merge "$image" render > /dev/null 2>&1
 ini="$vname/merge/instance/etc/zope.ini"
+conf="$vname/merge/instance/etc/zope.conf"
 grep -q '^threads = 8$' "$ini"
-grep -qE '^\[logger_plone\]' "$ini"
 grep -A1 '^\[logger_plone\]' "$ini" | grep -q '^level = DEBUG$'
-# The baked logging_loggers survive the deep merge.
+# The baked logging_loggers and environment keys survive the deep merge.
 grep -qE '^\[logger_waitress\]' "$ini"
+grep -qE '^[[:space:]]*PTS_LANGUAGES de en$' "$conf"
+grep -qE '^[[:space:]]*zope_i18n_compile_mo_files true$' "$conf"
 
 # 2. An explicit INSTANCE_* value wins over the mounted file.
 docker run --rm -v "$vname:/data" -v "$ufile:/app/instance.yaml:ro" \
@@ -52,22 +60,42 @@ docker run --rm -v "$vname:/data" -e CLIENT_HOME=/data/realm \
 	-e INSTANCE_http_realm=Example "$image" render > /dev/null 2>&1
 grep -q '^http-realm Example$' "$vname/realm/instance/etc/zope.conf"
 
-# 5. The server boots with a mounted file and an INSTANCE_* override.
-PLONE_TEST_SLEEP=3
-PLONE_TEST_TRIES=10
+# 5. A legacy-derived value overrides the mounted file (legacy sits above mount).
+docker run --rm -v "$vname:/data" -v "$ufile:/app/instance.yaml:ro" \
+	-e CLIENT_HOME=/data/legacy -e ZOPE_FORM_MEMORY_LIMIT=8MB \
+	"$image" render > /dev/null 2>&1
+grep -qE '^[[:space:]]*form-memory-limit 8MB$' "$vname/legacy/instance/etc/zope.conf"
+# 6. The server boots with a mounted file.
+boot() {
+	cname="$1"
+	cnames+=( "$cname" )
+	shift
+	docker run -d --name "$cname" "$@" "$image" start > /dev/null
+}
 
-cname="plone-merge-$RANDOM-$RANDOM"
-docker run -d --name "$cname" -v "$vname:/data" -v "$ufile:/app/instance.yaml:ro" \
-	-e CLIENT_HOME=/data/boot -e PLONE_RENDER=on -e INSTANCE_wsgi_threads=6 \
-	"$image" start > /dev/null
-
-get() {
+check_root() {
 	docker run --rm -i \
 		--link "$cname":plone \
 		--entrypoint /app/bin/python \
 		"$image" \
-		-c "from urllib.request import urlopen; con = urlopen('$1'); print(con.read())"
+		-c "from urllib.request import urlopen; con = urlopen('http://plone:8080'); print(con.read())"
 }
 
-. "$dir/../../retry.sh" --tries "$PLONE_TEST_TRIES" --sleep "$PLONE_TEST_SLEEP" get "http://plone:8080"
-[[ "$(get 'http://plone:8080')" == *"Welcome to Plone!"* ]]
+PLONE_TEST_SLEEP=3
+PLONE_TEST_TRIES=10
+
+boot "plone-merge-mount-$RANDOM-$RANDOM" \
+	-v "$vname:/data" -v "$ufile:/app/instance.yaml:ro" \
+	-e CLIENT_HOME=/data/boot-mount -e PLONE_RENDER=on
+. "$dir/../../retry.sh" --tries "$PLONE_TEST_TRIES" --sleep "$PLONE_TEST_SLEEP" check_root
+[[ "$(check_root)" == *"Welcome to Plone!"* ]]
+# Free /data's Data.fs before the second boot.
+docker rm -vf "$cname" > /dev/null 2>&1 || true
+
+# 7. The server boots with INSTANCE_* overrides (no mounted file).
+boot "plone-merge-instance-$RANDOM-$RANDOM" \
+	-v "$vname:/data" \
+	-e CLIENT_HOME=/data/boot-instance -e PLONE_RENDER=on \
+	-e INSTANCE_wsgi_listen=0.0.0.0:8080
+. "$dir/../../retry.sh" --tries "$PLONE_TEST_TRIES" --sleep "$PLONE_TEST_SLEEP" check_root
+[[ "$(check_root)" == *"Welcome to Plone!"* ]]
