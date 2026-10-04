@@ -23,6 +23,7 @@ CLASSICUI_IMAGE_NAME=plone/plone-classicui
 BASE_IMAGE_NAME=plone/server
 PLONE_VERSION=$$(cat version.txt)
 PYTHON_VERSION=3.13
+COOKIECUTTER_ZOPE_INSTANCE_VERSION=3.1.0
 IMAGE_TAG=${PLONE_VERSION}
 NIGHTLY_IMAGE_TAG=nightly
 
@@ -69,7 +70,7 @@ show-image: ## Print Version
 .PHONY: image-builder
 image-builder:  ## Build Base Image
 	@echo "Building $(BASE_IMAGE_NAME)-builder:$(IMAGE_TAG)"
-	@docker buildx build . --no-cache --build-arg PLONE_VERSION=${PLONE_VERSION} --build-arg PYTHON_VERSION=${PYTHON_VERSION} -t $(BASE_IMAGE_NAME)-builder:$(IMAGE_TAG) -f Dockerfile.builder --load
+	@docker buildx build . --no-cache --build-arg PLONE_VERSION=${PLONE_VERSION} --build-arg PYTHON_VERSION=${PYTHON_VERSION} --build-arg COOKIECUTTER_ZOPE_INSTANCE_VERSION=${COOKIECUTTER_ZOPE_INSTANCE_VERSION} -t $(BASE_IMAGE_NAME)-builder:$(IMAGE_TAG) -f Dockerfile.builder --load
 
 .PHONY: image-dev
 image-dev:  ## Build Dev Image
