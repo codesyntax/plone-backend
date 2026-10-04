@@ -29,48 +29,58 @@ case "${PLONE_RENDER:-}" in
   1|true|True|TRUE|yes|Yes|YES|on|On|ON) render_enabled=1 ;;
 esac
 
-# MAIN ENV Vars
-[ -z ${SECURITY_POLICY_IMPLEMENTATION+x} ] && export SECURITY_POLICY_IMPLEMENTATION=C
-[ -z ${VERBOSE_SECURITY+x} ] && export VERBOSE_SECURITY=off
-[ -z ${DEFAULT_ZPUBLISHER_ENCODING+x} ] && export DEFAULT_ZPUBLISHER_ENCODING=utf-8
-[ -z ${COMPILE_MO_FILES+x} ] && export COMPILE_MO_FILES=true
-[ -z ${DEBUG_MODE+x} ] && export DEBUG_MODE=off
-[ -z ${ZOPE_FORM_MEMORY_LIMIT+x} ] && export ZOPE_FORM_MEMORY_LIMIT=4MB
-[ -z ${ZOPE_FORM_DISK_LIMIT+x} ] && export ZOPE_FORM_DISK_LIMIT=1GB
-[ -z ${ZOPE_FORM_MEMFILE_LIMIT+x} ] && export ZOPE_FORM_MEMFILE_LIMIT=4KB
+# Legacy environment defaults. These feed the skeleton configuration path; on
+# the rendered path (PLONE_RENDER) the legacy shim fills the backend defaults
+# and the baked instance.yaml covers the rest, so that the shim only ever warns
+# about variables the operator actually set.
+if [[ -z "$render_enabled" ]]; then
+  # MAIN ENV Vars
+  [ -z ${SECURITY_POLICY_IMPLEMENTATION+x} ] && export SECURITY_POLICY_IMPLEMENTATION=C
+  [ -z ${VERBOSE_SECURITY+x} ] && export VERBOSE_SECURITY=off
+  [ -z ${DEFAULT_ZPUBLISHER_ENCODING+x} ] && export DEFAULT_ZPUBLISHER_ENCODING=utf-8
+  [ -z ${COMPILE_MO_FILES+x} ] && export COMPILE_MO_FILES=true
+  [ -z ${DEBUG_MODE+x} ] && export DEBUG_MODE=off
+  [ -z ${ZOPE_FORM_MEMORY_LIMIT+x} ] && export ZOPE_FORM_MEMORY_LIMIT=4MB
+  [ -z ${ZOPE_FORM_DISK_LIMIT+x} ] && export ZOPE_FORM_DISK_LIMIT=1GB
+  [ -z ${ZOPE_FORM_MEMFILE_LIMIT+x} ] && export ZOPE_FORM_MEMFILE_LIMIT=4KB
 
 
-# ZODB ENV Vars
-[ -z ${ZODB_CACHE_SIZE+x} ] && export ZODB_CACHE_SIZE=50000
+  # ZODB ENV Vars
+  [ -z ${ZODB_CACHE_SIZE+x} ] && export ZODB_CACHE_SIZE=50000
+fi
 
 if [[ -v RELSTORAGE_DSN ]]; then
   MSG="Using Relstorage configuration"
   CONF=relstorage.conf
-  # Relstorage ENV Vars
-  [ -z ${RELSTORAGE_NAME+x} ] && export RELSTORAGE_NAME=storage
-  [ -z ${RELSTORAGE_READ_ONLY+x} ] && export RELSTORAGE_READ_ONLY=off
-  [ -z ${RELSTORAGE_KEEP_HISTORY+x} ] && export RELSTORAGE_KEEP_HISTORY=true
-  [ -z ${RELSTORAGE_COMMIT_LOCK_TIMEOUT+x} ] && export RELSTORAGE_COMMIT_LOCK_TIMEOUT=30
-  [ -z ${RELSTORAGE_CREATE_SCHEMA+x} ] && export RELSTORAGE_CREATE_SCHEMA=true
-  [ -z ${RELSTORAGE_SHARED_BLOB_DIR+x} ] && export RELSTORAGE_SHARED_BLOB_DIR=false
-  [ -z ${RELSTORAGE_BLOB_CACHE_SIZE+x} ] && export RELSTORAGE_BLOB_CACHE_SIZE=100mb
-  [ -z ${RELSTORAGE_BLOB_CACHE_SIZE_CHECK+x} ] && export RELSTORAGE_BLOB_CACHE_SIZE_CHECK=10
-  [ -z ${RELSTORAGE_BLOB_CACHE_SIZE_CHECK_EXTERNAL+x} ] && export RELSTORAGE_BLOB_CACHE_SIZE_CHECK_EXTERNAL=false
-  [ -z ${RELSTORAGE_BLOB_CHUNK_SIZE+x} ] && export RELSTORAGE_BLOB_CHUNK_SIZE=1048576
-  [ -z ${RELSTORAGE_CACHE_LOCAL_MB+x} ] && export RELSTORAGE_CACHE_LOCAL_MB=10
-  [ -z ${RELSTORAGE_CACHE_LOCAL_OBJECT_MAX+x} ] && export RELSTORAGE_CACHE_LOCAL_OBJECT_MAX=16384
-  [ -z ${RELSTORAGE_CACHE_LOCAL_COMPRESSION+x} ] && export RELSTORAGE_CACHE_LOCAL_COMPRESSION=none
-  [ -z ${RELSTORAGE_CACHE_DELTA_SIZE_LIMIT+x} ] && export RELSTORAGE_CACHE_DELTA_SIZE_LIMIT=100000
+  if [[ -z "$render_enabled" ]]; then
+    # Relstorage ENV Vars
+    [ -z ${RELSTORAGE_NAME+x} ] && export RELSTORAGE_NAME=storage
+    [ -z ${RELSTORAGE_READ_ONLY+x} ] && export RELSTORAGE_READ_ONLY=off
+    [ -z ${RELSTORAGE_KEEP_HISTORY+x} ] && export RELSTORAGE_KEEP_HISTORY=true
+    [ -z ${RELSTORAGE_COMMIT_LOCK_TIMEOUT+x} ] && export RELSTORAGE_COMMIT_LOCK_TIMEOUT=30
+    [ -z ${RELSTORAGE_CREATE_SCHEMA+x} ] && export RELSTORAGE_CREATE_SCHEMA=true
+    [ -z ${RELSTORAGE_SHARED_BLOB_DIR+x} ] && export RELSTORAGE_SHARED_BLOB_DIR=false
+    [ -z ${RELSTORAGE_BLOB_CACHE_SIZE+x} ] && export RELSTORAGE_BLOB_CACHE_SIZE=100mb
+    [ -z ${RELSTORAGE_BLOB_CACHE_SIZE_CHECK+x} ] && export RELSTORAGE_BLOB_CACHE_SIZE_CHECK=10
+    [ -z ${RELSTORAGE_BLOB_CACHE_SIZE_CHECK_EXTERNAL+x} ] && export RELSTORAGE_BLOB_CACHE_SIZE_CHECK_EXTERNAL=false
+    [ -z ${RELSTORAGE_BLOB_CHUNK_SIZE+x} ] && export RELSTORAGE_BLOB_CHUNK_SIZE=1048576
+    [ -z ${RELSTORAGE_CACHE_LOCAL_MB+x} ] && export RELSTORAGE_CACHE_LOCAL_MB=10
+    [ -z ${RELSTORAGE_CACHE_LOCAL_OBJECT_MAX+x} ] && export RELSTORAGE_CACHE_LOCAL_OBJECT_MAX=16384
+    [ -z ${RELSTORAGE_CACHE_LOCAL_COMPRESSION+x} ] && export RELSTORAGE_CACHE_LOCAL_COMPRESSION=none
+    [ -z ${RELSTORAGE_CACHE_DELTA_SIZE_LIMIT+x} ] && export RELSTORAGE_CACHE_DELTA_SIZE_LIMIT=100000
+  fi
 elif  [[ -v ZEO_ADDRESS ]]; then
   MSG="Using ZEO configuration"
   CONF=zeo.conf
-  # Check ZEO variables
-  [ -z ${ZEO_SHARED_BLOB_DIR+x} ] && export ZEO_SHARED_BLOB_DIR=off
-  [ -z ${ZEO_READ_ONLY+x} ] && export ZEO_READ_ONLY=false
-  [ -z ${ZEO_CLIENT_READ_ONLY_FALLBACK+x} ] && export ZEO_CLIENT_READ_ONLY_FALLBACK=false
-  [ -z ${ZEO_STORAGE+x} ] && export ZEO_STORAGE=1
-  [ -z ${ZEO_CLIENT_CACHE_SIZE+x} ] && export ZEO_CLIENT_CACHE_SIZE=128MB
-  [ -z ${ZEO_DROP_CACHE_RATHER_VERIFY+x} ] && export ZEO_DROP_CACHE_RATHER_VERIFY=false
+  if [[ -z "$render_enabled" ]]; then
+    # Check ZEO variables
+    [ -z ${ZEO_SHARED_BLOB_DIR+x} ] && export ZEO_SHARED_BLOB_DIR=off
+    [ -z ${ZEO_READ_ONLY+x} ] && export ZEO_READ_ONLY=false
+    [ -z ${ZEO_CLIENT_READ_ONLY_FALLBACK+x} ] && export ZEO_CLIENT_READ_ONLY_FALLBACK=false
+    [ -z ${ZEO_STORAGE+x} ] && export ZEO_STORAGE=1
+    [ -z ${ZEO_CLIENT_CACHE_SIZE+x} ] && export ZEO_CLIENT_CACHE_SIZE=128MB
+    [ -z ${ZEO_DROP_CACHE_RATHER_VERIFY+x} ] && export ZEO_DROP_CACHE_RATHER_VERIFY=false
+  fi
 else
   MSG="Using default configuration"
   CONF=zope.conf
