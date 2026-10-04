@@ -147,7 +147,9 @@ render_instance() {
     /app/render/transform_from_environment.py \
     -i "$CLIENT_HOME/instance-merged.yaml" \
     -o "$CLIENT_HOME/instance-from-environment.yaml"
-  $sudo /app/render/venv/bin/cookiecutter -f --no-input \
+  # HOME must be writable: cookiecutter caches under $HOME/.cookiecutters, and an
+  # arbitrary --user has HOME=/ (unwritable) with only /data writable.
+  $sudo env HOME="$CLIENT_HOME" /app/render/venv/bin/cookiecutter -f --no-input \
     --config-file "$CLIENT_HOME/instance-from-environment.yaml" \
     /app/render/cookiecutter-zope-instance.zip \
     -o "$CLIENT_HOME"
