@@ -22,6 +22,13 @@ else
   sudo=""
 fi
 
+# Internal, temporary switch selecting the rendered configuration path instead
+# of the legacy skeleton path. Removed once the migration is complete (ticket 10).
+render_enabled=""
+case "${PLONE_RENDER:-}" in
+  1|true|True|TRUE|yes|Yes|YES|on|On|ON) render_enabled=1 ;;
+esac
+
 # MAIN ENV Vars
 [ -z ${SECURITY_POLICY_IMPLEMENTATION+x} ] && export SECURITY_POLICY_IMPLEMENTATION=C
 [ -z ${VERBOSE_SECURITY+x} ] && export VERBOSE_SECURITY=off
@@ -128,7 +135,30 @@ if [[ -v DEVELOP ]]; then
   $VENVBIN/pip install ${PACKAGES} ${PIP_PARAMS}
 fi
 
+# Render a complete Zope instance for this container.
+#
+# Pipeline (ticket 02 tracer bullet):
+#   1. copy the baked default instance.yaml (mounted-file merge is ticket 05);
+#   2. overlay explicit INSTANCE_* environment variables (legacy shim is ticket 03);
+#   3. render with cookiecutter into $CLIENT_HOME/instance.
+render_instance() {
+  cp /app/render/instance-default.yaml "$CLIENT_HOME/instance-merged.yaml"
+  $sudo /app/render/venv/bin/python \
+    /app/render/transform_from_environment.py \
+    -i "$CLIENT_HOME/instance-merged.yaml" \
+    -o "$CLIENT_HOME/instance-from-environment.yaml"
+  $sudo /app/render/venv/bin/cookiecutter -f --no-input \
+    --config-file "$CLIENT_HOME/instance-from-environment.yaml" \
+    /app/render/cookiecutter-zope-instance.zip \
+    -o "$CLIENT_HOME"
+}
+
 if [[ "$1" == "start" ]]; then
+  if [[ -n "$render_enabled" ]]; then
+    render_instance
+    echo "Starting Zope from the rendered instance in $CLIENT_HOME/instance"
+    exec $sudo $VENVBIN/runwsgi -v "$CLIENT_HOME/instance/etc/zope.ini"
+  fi
   # Handle Site creation
   if [[ -v SITE ]]; then
     export TYPE=${TYPE:-volto}
@@ -171,6 +201,9 @@ elif  [[ "$1" == "pack" ]]; then
   else
     exec $sudo $VENVBIN/zconsole run etc/${CONF} /app/scripts/pack.py
   fi
+elif  [[ "$1" == "render" ]]; then
+  render_instance
+  exit 0
 else
   # Custom
   exec "$@"
