@@ -36,12 +36,25 @@ done
 
 # Targeted assertions on the generated configuration (no whole-file diffs).
 grep -q '%define INSTANCEHOME /data/render-test/instance' "$conf"
-grep -q '%define CLIENTHOME /data' "$conf"
+grep -q '%define CLIENTHOME /data/render-test' "$conf"
 grep -q '<filestorage>' "$conf"
 grep -q 'path /data/filestorage/Data.fs' "$conf"
 grep -q 'blob-dir /data/blobstorage' "$conf"
 grep -q 'zope_conf = %(here)s/zope.conf' "$ini"
 grep -q '^admin:' "$inituser"
+
+# INSTANCE_* variables overlay the baked default.
+docker run --rm -v "$vname:/data" -e CLIENT_HOME=/data/override \
+	-e INSTANCE_debug_mode=true -e INSTANCE_wsgi_listen=0.0.0.0:8090 \
+	"$image" render > /dev/null 2>&1
+grep -q 'debug-mode on' "$vname/override/instance/etc/zope.conf"
+grep -q 'listen = 0.0.0.0:8090' "$vname/override/instance/etc/zope.ini"
+
+# Without CLIENT_HOME, the per-container /data/<hostname>/<hostid> default is reproduced.
+docker run --rm -v "$vname:/data" --hostname plonetest "$image" render > /dev/null 2>&1
+default_conf=( "$vname"/plonetest/*/instance/etc/zope.conf )
+test -f "${default_conf[0]}"
+grep -qE '%define CLIENTHOME /data/plonetest/' "${default_conf[0]}"
 
 # 2. Rendering must also work as an arbitrary user with only /data writable.
 docker run --rm --user="$(id -u)" -v "$vuser:/data" \

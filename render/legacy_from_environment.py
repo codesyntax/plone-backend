@@ -10,9 +10,12 @@ present. ``transform_from_environment.py`` then overlays those onto the merged
 When the backend is selected by the legacy presence variables
 (``RELSTORAGE_DSN`` / ``ZEO_ADDRESS``), the legacy backend defaults are filled
 too, for byte-for-byte parity with the skeleton. Pure ``INSTANCE_*`` users get
-cookiecutter's own defaults. When any legacy variable is used, a single
-aggregated deprecation warning is printed on stderr naming them; nothing is
-printed when none are used.
+cookiecutter's own defaults. Behaviour variables (``DEBUG_MODE``,
+``VERBOSE_SECURITY``, ``ZODB_CACHE_SIZE``, ``ZOPE_FORM_*``, ``COMPILE_MO_FILES``,
+``CHAMELEON_CACHE``), ``LISTEN_PORT``, ``CLIENT_HOME`` and ``CORS_*`` are
+translated as well. When any legacy variable is used, a single aggregated
+deprecation warning is printed on stderr naming them; nothing is printed when
+none are used.
 """
 
 from __future__ import annotations
@@ -23,10 +26,17 @@ import sys
 
 #: Legacy variable names that were actually set, in the order encountered.
 _warned: list[str] = []
+#: Extra warnings for legacy variables with no clean equivalent.
+_breakages: list[str] = []
 #: ``INSTANCE_*`` assignments to emit, keyed by target variable name.
 _exports: dict[str, str] = {}
 
 _TRUTHY = frozenset({"1", "true", "yes", "on", "t", "y"})
+
+#: Legacy variables the images/entrypoint always provide (image ``ENV`` defaults
+#: or the entrypoint's ``CLIENT_HOME``). They are translated for parity but never
+#: reported, so a plain render does not look like legacy usage.
+_SILENT = frozenset({"CLIENT_HOME", "CHAMELEON_CACHE", "DEBUG_MODE"})
 
 
 def _as_bool(value: str) -> str:
@@ -52,6 +62,8 @@ def _set(key: str, value: str) -> None:
 
 
 def _mark(name: str) -> None:
+    if name in _SILENT:
+        return
     if name not in _warned:
         _warned.append(name)
 
@@ -87,6 +99,28 @@ _ZEO = (
     ("ZEO_STORAGE", "db_zeo_storage", None, "1"),
     ("ZEO_CLIENT_CACHE_SIZE", "db_zeo_cache_size", None, "128MB"),
     ("ZEO_DROP_CACHE_RATHER_VERIFY", "db_zeo_drop_cache_rather_verify", _as_bool, "false"),
+)
+
+#: ``(legacy name, INSTANCE_* key, value transform)``; the baked instance.yaml
+#: already provides the legacy defaults, so none are filled here.
+_BEHAVIOUR = (
+    ("DEBUG_MODE", "debug_mode", _as_bool),
+    ("VERBOSE_SECURITY", "verbose_security", _as_bool),
+    ("COMPILE_MO_FILES", "environment_DICT_zope_i18n_compile_mo_files", _as_bool),
+    ("CHAMELEON_CACHE", "environment_DICT_CHAMELEON_CACHE", None),
+    ("ZOPE_FORM_MEMORY_LIMIT", "dos_protection_form_memory_limit", None),
+    ("ZOPE_FORM_DISK_LIMIT", "dos_protection_form_disk_limit", None),
+    ("ZOPE_FORM_MEMFILE_LIMIT", "dos_protection_form_memfile_limit", None),
+    ("ZODB_CACHE_SIZE", "db_cache_size", None),
+)
+
+_CORS = (
+    ("CORS_ALLOW_ORIGIN", "cors_allow_origin", None),
+    ("CORS_ALLOW_METHODS", "cors_allow_methods", None),
+    ("CORS_ALLOW_CREDENTIALS", "cors_allow_credentials", _as_bool),
+    ("CORS_EXPOSE_HEADERS", "cors_expose_headers", None),
+    ("CORS_ALLOW_HEADERS", "cors_allow_headers", None),
+    ("CORS_MAX_AGE", "cors_max_age", None),
 )
 
 
@@ -127,15 +161,63 @@ def _apply(table, fill_defaults: bool) -> None:
         _set(key, transform(value) if transform else value)
 
 
-def main() -> int:
+def _apply_optional(table) -> None:
+    """Translate the entries of a ``(name, key, transform)`` table that are set."""
+    for name, key, transform in table:
+        if name not in os.environ:
+            continue
+        _mark(name)
+        value = os.environ[name]
+        _set(key, transform(value) if transform else value)
+
+
+def _map_backend() -> None:
     backend, legacy_selected = _backend()
     if legacy_selected and backend in ("relstorage", "zeo"):
         _set("db_storage", backend)
-
     if backend == "relstorage":
         _apply(_RELSTORAGE, fill_defaults=legacy_selected)
     elif backend == "zeo":
         _apply(_ZEO, fill_defaults=legacy_selected)
+
+
+def _map_paths() -> None:
+    if "CLIENT_HOME" in os.environ:
+        _mark("CLIENT_HOME")
+        _set("location_clienthome", os.environ["CLIENT_HOME"])
+    if "LISTEN_PORT" in os.environ:
+        _mark("LISTEN_PORT")
+        _set("wsgi_listen", f"0.0.0.0:{os.environ['LISTEN_PORT']}")
+
+
+def _map_cors() -> None:
+    if not any(name in os.environ for name, *_ in _CORS):
+        return
+    _apply_optional(_CORS)
+    # The legacy trigger was "any CORS_* present", not an explicit flag.
+    _set("cors_enabled", "true")
+
+
+def _map_breakages() -> None:
+    """Accepted breakages: document/default, never emulate (decision ticket 03)."""
+    policy = os.environ.get("SECURITY_POLICY_IMPLEMENTATION")
+    if policy is not None and policy.strip().lower() != "c":
+        _mark("SECURITY_POLICY_IMPLEMENTATION")
+        _set("verbose_security", "true")
+    encoding = os.environ.get("DEFAULT_ZPUBLISHER_ENCODING")
+    if encoding is not None and encoding.strip().lower() != "utf-8":
+        _breakages.append(
+            f"DEFAULT_ZPUBLISHER_ENCODING={encoding} is ignored; the rendered "
+            "zope.conf hardcodes utf-8"
+        )
+
+
+def main() -> int:
+    _map_backend()
+    _apply_optional(_BEHAVIOUR)
+    _map_paths()
+    _map_cors()
+    _map_breakages()
 
     for target, value in _exports.items():
         print(f"export {target}={shlex.quote(value)}")
@@ -148,6 +230,8 @@ def main() -> int:
             "instance.yaml instead.",
             file=sys.stderr,
         )
+    for message in _breakages:
+        print(f"WARNING: {message}", file=sys.stderr)
     return 0
 
 

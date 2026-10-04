@@ -29,11 +29,18 @@ case "${PLONE_RENDER:-}" in
   1|true|True|TRUE|yes|Yes|YES|on|On|ON) render_enabled=1 ;;
 esac
 
+# Whether this invocation uses the rendered configuration path. The explicit
+# `render` subcommand does, even without the switch.
+render_path=""
+if [[ -n "$render_enabled" || "${1:-}" == "render" ]]; then
+  render_path=1
+fi
+
 # Legacy environment defaults. These feed the skeleton configuration path; on
 # the rendered path (PLONE_RENDER) the legacy shim fills the backend defaults
 # and the baked instance.yaml covers the rest, so that the shim only ever warns
 # about variables the operator actually set.
-if [[ -z "$render_enabled" ]]; then
+if [[ -z "$render_path" ]]; then
   # MAIN ENV Vars
   [ -z ${SECURITY_POLICY_IMPLEMENTATION+x} ] && export SECURITY_POLICY_IMPLEMENTATION=C
   [ -z ${VERBOSE_SECURITY+x} ] && export VERBOSE_SECURITY=off
@@ -52,7 +59,7 @@ fi
 if [[ -v RELSTORAGE_DSN ]]; then
   MSG="Using Relstorage configuration"
   CONF=relstorage.conf
-  if [[ -z "$render_enabled" ]]; then
+  if [[ -z "$render_path" ]]; then
     # Relstorage ENV Vars
     [ -z ${RELSTORAGE_NAME+x} ] && export RELSTORAGE_NAME=storage
     [ -z ${RELSTORAGE_READ_ONLY+x} ] && export RELSTORAGE_READ_ONLY=off
@@ -72,7 +79,7 @@ if [[ -v RELSTORAGE_DSN ]]; then
 elif  [[ -v ZEO_ADDRESS ]]; then
   MSG="Using ZEO configuration"
   CONF=zeo.conf
-  if [[ -z "$render_enabled" ]]; then
+  if [[ -z "$render_path" ]]; then
     # Check ZEO variables
     [ -z ${ZEO_SHARED_BLOB_DIR+x} ] && export ZEO_SHARED_BLOB_DIR=off
     [ -z ${ZEO_READ_ONLY+x} ] && export ZEO_READ_ONLY=false
@@ -116,8 +123,11 @@ else
   done
 fi
 
-# Handle CORS
-$sudo $VENVBIN/python /app/scripts/cors.py
+# Handle CORS (rendered into the instance on the render path; the drop-in
+# helper script is legacy).
+if [[ -z "$render_path" ]]; then
+  $sudo $VENVBIN/python /app/scripts/cors.py
+fi
 
 # Handle ADDONS installation
 if [[ -n "${ADDONS}" ]]; then
