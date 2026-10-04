@@ -137,12 +137,16 @@ fi
 
 # Render a complete Zope instance for this container.
 #
-# Pipeline (ticket 02 tracer bullet):
+# Pipeline:
 #   1. copy the baked default instance.yaml (mounted-file merge is ticket 05);
-#   2. overlay explicit INSTANCE_* environment variables (legacy shim is ticket 03);
-#   3. render with cookiecutter into $CLIENT_HOME/instance.
+#   2. translate the legacy environment onto INSTANCE_* (legacy shim);
+#   3. overlay INSTANCE_* environment variables (vendored transform);
+#   4. render with cookiecutter into $CLIENT_HOME/instance.
 render_instance() {
   cp /app/render/instance-default.yaml "$CLIENT_HOME/instance-merged.yaml"
+  $sudo /app/render/venv/bin/python /app/render/legacy_from_environment.py \
+    > "$CLIENT_HOME/instance-legacy-env.sh"
+  . "$CLIENT_HOME/instance-legacy-env.sh"
   $sudo /app/render/venv/bin/python \
     /app/render/transform_from_environment.py \
     -i "$CLIENT_HOME/instance-merged.yaml" \

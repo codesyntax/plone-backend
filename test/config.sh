@@ -17,6 +17,7 @@ plone-zeoclient
 plone-relstorage
 plone-shared-blob-dir
 plone-render
+plone-legacy-shim
 '
 
 imageTests+=(
