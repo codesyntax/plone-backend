@@ -18,6 +18,7 @@ plone-relstorage
 plone-shared-blob-dir
 plone-render
 plone-legacy-shim
+plone-merge
 '
 
 imageTests+=(
