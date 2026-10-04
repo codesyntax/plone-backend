@@ -60,9 +60,9 @@ RUN <<EOT
     python -m venv /app/render/venv
     /app/render/venv/bin/pip install -U pip wheel
     /app/render/venv/bin/pip install cookiecutter pyyaml
-    curl -L -o /app/render/cookiecutter-zope-instance.zip \
+    curl -L --fail -o /app/render/cookiecutter-zope-instance.zip \
         "https://github.com/plone/cookiecutter-zope-instance/archive/refs/tags/${COOKIECUTTER_ZOPE_INSTANCE_VERSION}.zip"
-    curl -L -o /app/render/transform_from_environment.py \
+    curl -L --fail -o /app/render/transform_from_environment.py \
         "https://raw.githubusercontent.com/plone/cookiecutter-zope-instance/${COOKIECUTTER_ZOPE_INSTANCE_VERSION}/helpers/transform_from_environment.py"
     cd /app/render
     ./venv/bin/python transform_from_environment.py \
