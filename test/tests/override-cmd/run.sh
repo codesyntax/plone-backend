@@ -23,8 +23,7 @@ fi
 testOutput="$(tr -d '\r' <<<"$testOutput")" # Windows gives us \r\n ...  :D
 [ "$testOutput" = "Hello $hello" ]
 
-# now test with normal command to verify the default entrypoint is OK
-# (and that a custom command passthrough does not trigger a render)
+# now test with normal command to verify the default entrypoint passthrough
 output="$(docker run --rm "$image" "${cmd[@]}")"
 output="$(tr -d '\r' <<<"$output")" # Windows gives us \r\n ...  :D
 [ "$output" = "Hello $hello" ]

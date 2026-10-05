@@ -86,50 +86,59 @@ site_banner() {
   echo "======================================================================================="
 }
 
-if [[ "$1" == "start" ]]; then
-  render_instance
-  if [[ -v SITE ]]; then
-    export TYPE=${TYPE:-volto}
-    export SITE_ID=${SITE}
-    site_banner
-    $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" /app/scripts/create_site.py
-  fi
-  echo "Starting Zope from the rendered instance in $CLIENT_HOME/instance"
-  exec $sudo $VENVBIN/runwsgi -v "$RENDERED_ETC/zope.ini"
-elif [[ "$1" == "create-classic" || "$1" == "create-volto" || "$1" == "create-site" ]]; then
-  case "$1" in
-    create-classic) export TYPE=classic ;;
-    create-volto) export TYPE=volto ;;
-    create-site) export TYPE=${TYPE:-volto} ;;
-  esac
-  render_instance
-  exec $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" /app/scripts/create_site.py
-elif [[ "$1" == "console" ]]; then
-  render_instance
-  exec $sudo $VENVBIN/zconsole debug "$RENDERED_ETC/zope.conf"
-elif [[ "$1" == "run" ]]; then
-  render_instance
-  exec $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" "${@:2}"
-elif [[ "$1" == "addzopeuser" ]]; then
-  render_instance
-  exec $sudo $VENVBIN/addzopeuser -c "$RENDERED_ETC/zope.conf" "${@:2}"
-elif [[ "$1" == "pack" ]]; then
-  render_instance
-  case "${INSTANCE_db_storage:-direct}" in
-    zeo)
-      exec $sudo $VENVBIN/zeopack "${@:2}" "${ZEO_ADDRESS:-$INSTANCE_db_zeo_server}"
-      ;;
-    relstorage)
-      exec $sudo $VENVBIN/zodbpack "${@:2}" "$RENDERED_ETC/relstorage-pack.conf"
-      ;;
-    *)
-      exec $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" /app/scripts/pack.py
-      ;;
-  esac
-elif [[ "$1" == "render" ]]; then
-  render_instance
-  exit 0
-else
-  # Custom
-  exec "$@"
-fi
+# Only instance-needing subcommands render the instance; anything else is a pure
+# command passthrough.
+case "$1" in
+  start|create-classic|create-volto|create-site|console|run|addzopeuser|pack|render)
+    render_instance
+    ;;
+  *)
+    exec "$@"
+    ;;
+esac
+
+case "$1" in
+  start)
+    if [[ -v SITE ]]; then
+      export TYPE=${TYPE:-volto}
+      export SITE_ID=${SITE}
+      site_banner
+      $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" /app/scripts/create_site.py
+    fi
+    echo "Starting Zope from the rendered instance in $CLIENT_HOME/instance"
+    exec $sudo $VENVBIN/runwsgi -v "$RENDERED_ETC/zope.ini"
+    ;;
+  create-classic | create-volto | create-site)
+    case "$1" in
+      create-classic) export TYPE=classic ;;
+      create-volto) export TYPE=volto ;;
+      create-site) export TYPE=${TYPE:-volto} ;;
+    esac
+    exec $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" /app/scripts/create_site.py
+    ;;
+  console)
+    exec $sudo $VENVBIN/zconsole debug "$RENDERED_ETC/zope.conf"
+    ;;
+  run)
+    exec $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" "${@:2}"
+    ;;
+  addzopeuser)
+    exec $sudo $VENVBIN/addzopeuser -c "$RENDERED_ETC/zope.conf" "${@:2}"
+    ;;
+  pack)
+    case "${INSTANCE_db_storage:-direct}" in
+      zeo)
+        exec $sudo $VENVBIN/zeopack "${@:2}" "${ZEO_ADDRESS:-$INSTANCE_db_zeo_server}"
+        ;;
+      relstorage)
+        exec $sudo $VENVBIN/zodbpack "${@:2}" "$RENDERED_ETC/relstorage-pack.conf"
+        ;;
+      *)
+        exec $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" /app/scripts/pack.py
+        ;;
+    esac
+    ;;
+  render)
+    exit 0
+    ;;
+esac
