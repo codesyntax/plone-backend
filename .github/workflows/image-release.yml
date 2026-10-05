@@ -33,7 +33,7 @@ on:
           tags (opt-in experimental release). Empty for a normal release.
         required: false
         type: string
-        default: ""
+        default: ''
       build-version:
         description: >-
           Value passed as the PLONE_VERSION build arg (used for the base image
@@ -41,7 +41,7 @@ on:
           release the downstream images pass the suffixed base tag.
         required: false
         type: string
-        default: ""
+        default: ''
     secrets:
       ghcr-registry-username:
         required: true
@@ -81,7 +81,6 @@ jobs:
             type=raw,value=latest,enable=${{ inputs.is-latest && inputs.tag-suffix == '' }}
             type=raw,value=${{ inputs.plone-version }},enable=${{ inputs.tag-suffix == '' }}
             type=raw,value=${{ inputs.plone-version }}${{ inputs.tag-suffix }},enable=${{ inputs.tag-suffix != '' }}
-            type=sha,suffix=${{ inputs.tag-suffix }},enable=${{ inputs.tag-suffix != '' }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
