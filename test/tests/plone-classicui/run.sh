@@ -8,6 +8,9 @@ image="$1"
 # The obsolete /app/var symlink is gone from the ClassicUI image.
 docker run --rm --entrypoint sh "$image" -c 'test ! -e /app/var'
 
+PLONE_TEST_SLEEP=3
+PLONE_TEST_TRIES=15
+
 site="Plone$RANDOM"
 cname="plone-classicui-$RANDOM-$RANDOM"
 cid="$(docker run -d --name "$cname" -e PLONE_RENDER=on -e SITE=$site "$image")"
@@ -21,7 +24,12 @@ get() {
 		-c "from urllib.request import urlopen; con = urlopen('$1'); print(con.read())"
 }
 
-. "$dir/../../retry.sh" --tries 15 --sleep 3 get "http://plone:8080/$site"
+. "$dir/../../retry.sh" --tries "$PLONE_TEST_TRIES" --sleep "$PLONE_TEST_SLEEP" get "http://plone:8080/$site"
 
-# A ClassicUI distribution site is served by the rendered instance (TYPE=classic).
+# The site responds from the rendered instance, and TYPE=classic (the image
+# default) drove its creation.
 [[ "$(get "http://plone:8080/$site")" == *"Welcome to Plone"* ]]
+docker logs "$cid" 2>&1 | grep -q "the classic distribution"
+
+# The render hook did not recreate the removed /app/var directory.
+docker exec "$cid" sh -c 'test ! -e /app/var'
