@@ -5,6 +5,14 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      tag-suffix:
+        description: >-
+          Append this suffix to every image tag to publish an opt-in
+          experimental release (e.g. -cczi). Leave empty for a normal release.
+        required: false
+        type: string
+        default: ''
 
 env:
   BASE_IMAGE_NAME: plone/server
@@ -20,6 +28,7 @@ jobs:
       IS_LATEST: ${{ steps.vars.outputs.IS_LATEST }}
       PLATFORMS: ${{ steps.vars.outputs.PLATFORMS }}
       PLONE_VERSION: ${{ steps.vars.outputs.PLONE_VERSION }}
+      TAG_SUFFIX: ${{ steps.vars.outputs.TAG_SUFFIX }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,6 +40,7 @@ jobs:
           echo "PLATFORMS=$PLATFORMS" >> $GITHUB_OUTPUT
           echo "IS_LATEST=$IS_LATEST" >> $GITHUB_OUTPUT
           echo "PLONE_VERSION=$(cat version.txt)" >> $GITHUB_OUTPUT
+          echo "TAG_SUFFIX=${{ github.event.inputs.tag-suffix }}" >> $GITHUB_OUTPUT
 
   builder-image:
     needs:
@@ -40,8 +50,10 @@ jobs:
       plone-version: ${{ needs.meta.outputs.PLONE_VERSION }}
       image-name: ${{ needs.meta.outputs.BASE_IMAGE_NAME }}-builder
       dockerfile: Dockerfile.builder
+      build-version: ${{ needs.meta.outputs.PLONE_VERSION }}
       platforms: ${{ needs.meta.outputs.PLATFORMS  }}
       is-latest: ${{ needs.meta.outputs.IS_LATEST == 'true'  }}
+      tag-suffix: ${{ needs.meta.outputs.TAG_SUFFIX }}
       load: false
       push: true
     secrets:
@@ -56,8 +68,10 @@ jobs:
       plone-version: ${{ needs.meta.outputs.PLONE_VERSION }}
       image-name: ${{ needs.meta.outputs.BASE_IMAGE_NAME }}-prod-config
       dockerfile: Dockerfile.prod
+      build-version: ${{ needs.meta.outputs.PLONE_VERSION }}
       platforms: ${{ needs.meta.outputs.PLATFORMS  }}
       is-latest: ${{ needs.meta.outputs.IS_LATEST == 'true'  }}
+      tag-suffix: ${{ needs.meta.outputs.TAG_SUFFIX }}
       load: false
       push: true
     secrets:
@@ -74,8 +88,10 @@ jobs:
       plone-version: ${{ needs.meta.outputs.PLONE_VERSION }}
       image-name: ${{ needs.meta.outputs.BASE_IMAGE_NAME }}-dev
       dockerfile: Dockerfile.dev
+      build-version: ${{ needs.meta.outputs.PLONE_VERSION }}${{ needs.meta.outputs.TAG_SUFFIX }}
       platforms: ${{ needs.meta.outputs.PLATFORMS  }}
       is-latest: ${{ needs.meta.outputs.IS_LATEST == 'true'  }}
+      tag-suffix: ${{ needs.meta.outputs.TAG_SUFFIX }}
       load: false
       push: true
     secrets:
@@ -93,8 +109,10 @@ jobs:
       plone-version: ${{ needs.meta.outputs.PLONE_VERSION }}
       image-name: ${{ needs.meta.outputs.BASE_IMAGE_NAME }}-acceptance
       dockerfile: Dockerfile.acceptance
+      build-version: ${{ needs.meta.outputs.PLONE_VERSION }}${{ needs.meta.outputs.TAG_SUFFIX }}
       platforms: ${{ needs.meta.outputs.PLATFORMS  }}
       is-latest: ${{ needs.meta.outputs.IS_LATEST == 'true'  }}
+      tag-suffix: ${{ needs.meta.outputs.TAG_SUFFIX }}
       load: false
       push: true
     secrets:
@@ -116,8 +134,10 @@ jobs:
         ghcr.io/plone/plone-backend
         plone/plone-backend
       dockerfile: Dockerfile
+      build-version: ${{ needs.meta.outputs.PLONE_VERSION }}${{ needs.meta.outputs.TAG_SUFFIX }}
       platforms: ${{ needs.meta.outputs.PLATFORMS  }}
       is-latest: ${{ needs.meta.outputs.IS_LATEST == 'true'  }}
+      tag-suffix: ${{ needs.meta.outputs.TAG_SUFFIX }}
       load: false
       push: true
     secrets:
@@ -138,8 +158,10 @@ jobs:
         ghcr.io/plone/plone-classicui
         plone/plone-classicui
       dockerfile: Dockerfile.classicui
+      build-version: ${{ needs.meta.outputs.PLONE_VERSION }}${{ needs.meta.outputs.TAG_SUFFIX }}
       platforms: ${{ needs.meta.outputs.PLATFORMS  }}
       is-latest: ${{ needs.meta.outputs.IS_LATEST == 'true'  }}
+      tag-suffix: ${{ needs.meta.outputs.TAG_SUFFIX }}
       load: false
       push: true
     secrets:

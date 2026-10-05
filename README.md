@@ -36,6 +36,26 @@ These images are **not** Buildout based!
 Please note that the backend images in the 6.2.x series may get several updated dependencies, which you should verify and test before using them in any existing project. Even if you extend from these images.
 Python has been updated from 3.12 to 3.13.
 
+### Possible breaking changes: new configuration model
+
+The backend images can now generate the Zope configuration at container start with
+`cookiecutter-zope-instance`, driven by the same `instance.yaml` / `INSTANCE_*` vocabulary used
+by cookieplone. This is published first under the opt-in experimental tag `6.2.2-cczi`; the
+normal tags keep the previous build until it is promoted.
+
+If you adopt it:
+
+- The `etc/package-includes/*.zcml` and `etc/zope.conf.d/*.conf` drop-ins are **removed**.
+  Replace them with `INSTANCE_zcml_package_includes`, a mounted `instance.yaml`, or
+  `wsgi_filters`.
+- Legacy environment variables (`RELSTORAGE_*`, `ZEO_ADDRESS`, `DEBUG_MODE`, `CORS_*`, …) keep
+  working with a deprecation warning, but `SECURITY_POLICY_IMPLEMENTATION` and
+  `DEFAULT_ZPUBLISHER_ENCODING` no longer have an independent setting.
+- Roll back by redeploying a previous, immutable image tag: the data under `/data` is
+  unchanged.
+
+See the [migration guide](docs/migration-cookiecutter-zope-instance.md).
+
 ### Experimental UV-based images
 
 A parallel track of images built with [UV](https://docs.astral.sh/uv/) lives on the [`uv` branch](https://github.com/plone/container-backend/tree/uv) and is published as `plone/server-builder:uv-<python>` and `plone/server-prod-config:uv-<python>` for Python 3.11, 3.12, 3.13 and 3.14. These images are rebuilt weekly (Mondays, 05:00 UTC) so they stay in sync with upstream Debian, Python, UV and Plone dependency updates.

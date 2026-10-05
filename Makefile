@@ -24,7 +24,10 @@ BASE_IMAGE_NAME=plone/server
 PLONE_VERSION=$$(cat version.txt)
 PYTHON_VERSION=3.13
 COOKIECUTTER_ZOPE_INSTANCE_VERSION=3.1.0
-IMAGE_TAG=${PLONE_VERSION}
+# Append this to every image tag to build an opt-in experimental release, e.g.
+#   make build-images EXPERIMENTAL_SUFFIX=-cczi
+EXPERIMENTAL_SUFFIX=
+IMAGE_TAG=${PLONE_VERSION}${EXPERIMENTAL_SUFFIX}
 NIGHTLY_IMAGE_TAG=nightly
 
 # Code Quality

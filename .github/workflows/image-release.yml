@@ -27,6 +27,21 @@ on:
         required: false
         type: boolean
         default: false
+      tag-suffix:
+        description: >-
+          Append this suffix to every image tag and publish only the suffixed
+          tags (opt-in experimental release). Empty for a normal release.
+        required: false
+        type: string
+        default: ""
+      build-version:
+        description: >-
+          Value passed as the PLONE_VERSION build arg (used for the base image
+          tag and constraints). Defaults to plone-version; for an experimental
+          release the downstream images pass the suffixed base tag.
+        required: false
+        type: string
+        default: ""
     secrets:
       ghcr-registry-username:
         required: true
@@ -56,15 +71,17 @@ jobs:
           flavor: |
             latest=false
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=pep440,pattern={{version}}, value=${{ inputs.plone-version }}
-            type=pep440,pattern={{major}}.{{minor}}.{{patch}}, value=${{ inputs.plone-version }}
-            type=pep440,pattern={{major}}.{{minor}}, value=${{ inputs.plone-version }}
-            type=pep440,pattern={{major}}, value=${{ inputs.plone-version }}
-            type=sha
-            type=raw,value=latest,enable=${{ inputs.is-latest }}
-            type=raw,value=${{ inputs.plone-version }}
+            type=ref,event=branch,enable=${{ inputs.tag-suffix == '' }}
+            type=ref,event=pr,enable=${{ inputs.tag-suffix == '' }}
+            type=pep440,pattern={{version}}, value=${{ inputs.plone-version }},enable=${{ inputs.tag-suffix == '' }}
+            type=pep440,pattern={{major}}.{{minor}}.{{patch}}, value=${{ inputs.plone-version }},enable=${{ inputs.tag-suffix == '' }}
+            type=pep440,pattern={{major}}.{{minor}}, value=${{ inputs.plone-version }},enable=${{ inputs.tag-suffix == '' }}
+            type=pep440,pattern={{major}}, value=${{ inputs.plone-version }},enable=${{ inputs.tag-suffix == '' }}
+            type=sha,enable=${{ inputs.tag-suffix == '' }}
+            type=raw,value=latest,enable=${{ inputs.is-latest && inputs.tag-suffix == '' }}
+            type=raw,value=${{ inputs.plone-version }},enable=${{ inputs.tag-suffix == '' }}
+            type=raw,value=${{ inputs.plone-version }}${{ inputs.tag-suffix }},enable=${{ inputs.tag-suffix != '' }}
+            type=sha,suffix=${{ inputs.tag-suffix }},enable=${{ inputs.tag-suffix != '' }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -92,7 +109,7 @@ jobs:
           context: .
           file: ${{ inputs.dockerfile }}
           build-args: |
-            PLONE_VERSION=${{ inputs.plone-version }}
+            PLONE_VERSION=${{ inputs.build-version || inputs.plone-version }}
           push: ${{ inputs.push && github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

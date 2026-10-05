@@ -1,0 +1,1 @@
+Bake pinned `cookiecutter-zope-instance` render tooling (isolated venv, pinned template archive and the legacy env shim) into `server-builder` and `nightly`, with a build-time smoke render of the baked default instance.

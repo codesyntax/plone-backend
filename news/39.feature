@@ -1,0 +1,1 @@
+Configure the instance with the same `instance.yaml` and `INSTANCE_*` variables used by cookieplone, or mount your own `instance.yaml` over the baked defaults. All storage backends now ship in the single image (including `pgjsonb` and the S3 blob wrapper via `INSTANCE_db_z3blobs_enabled`), and a new `render` subcommand materializes the instance for tests and debugging.
