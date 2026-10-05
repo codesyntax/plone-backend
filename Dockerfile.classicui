@@ -24,8 +24,9 @@ WORKDIR /app
 # Copy /app from builder
 COPY --from=builder --chown=500:500 /app /app
 
-# Link /data (the exposed volume) into /app/var
-RUN ln -s /data /app/var
+# The rendered instance keeps its cache under /data; the legacy /app/var symlink
+# is no longer needed.
+ENV CHAMELEON_CACHE=/data/cache
 
 # Setup default type for site creation to be classic
 ENV TYPE=classic

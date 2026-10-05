@@ -62,6 +62,15 @@ jobs:
           tags: |
             type=sha
 
+      - name: ClassicUI Image
+        id: meta-classicui
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            plone/plone-classicui
+          tags: |
+            type=sha
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -99,7 +108,18 @@ jobs:
           build-args: |
             PLONE_VERSION=${{ needs.meta.outputs.SHA }}
 
+      - name: Build classicui image for testing
+        uses: docker/build-push-action@v4
+        with:
+          context: ./
+          file: Dockerfile.classicui
+          tags: ${{ steps.meta-classicui.outputs.tags }}
+          push: true
+          build-args: |
+            PLONE_VERSION=${{ needs.meta.outputs.SHA }}
+
       - name: Test
         run: |
           docker pull ${{ steps.meta-main.outputs.tags }}
-          ./test/run.sh  ${{ steps.meta-main.outputs.tags }}
+          docker pull ${{ steps.meta-classicui.outputs.tags }}
+          ./test/run.sh  ${{ steps.meta-main.outputs.tags }} ${{ steps.meta-classicui.outputs.tags }}
