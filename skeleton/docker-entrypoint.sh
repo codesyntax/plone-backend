@@ -22,113 +22,6 @@ else
   sudo=""
 fi
 
-# Internal, temporary switch selecting the rendered configuration path instead
-# of the legacy skeleton path. Removed once the migration is complete (ticket 10).
-render_enabled=""
-case "${PLONE_RENDER:-}" in
-  1|true|True|TRUE|yes|Yes|YES|on|On|ON) render_enabled=1 ;;
-esac
-
-# Whether this invocation uses the rendered configuration path. The explicit
-# `render` subcommand does, even without the switch.
-render_path=""
-if [[ -n "$render_enabled" || "${1:-}" == "render" ]]; then
-  render_path=1
-fi
-
-# Legacy environment defaults. These feed the skeleton configuration path; on
-# the rendered path (PLONE_RENDER) the legacy shim fills the backend defaults
-# and the baked instance.yaml covers the rest, so that the shim only ever warns
-# about variables the operator actually set.
-if [[ -z "$render_path" ]]; then
-  # MAIN ENV Vars
-  [ -z ${SECURITY_POLICY_IMPLEMENTATION+x} ] && export SECURITY_POLICY_IMPLEMENTATION=C
-  [ -z ${VERBOSE_SECURITY+x} ] && export VERBOSE_SECURITY=off
-  [ -z ${DEFAULT_ZPUBLISHER_ENCODING+x} ] && export DEFAULT_ZPUBLISHER_ENCODING=utf-8
-  [ -z ${COMPILE_MO_FILES+x} ] && export COMPILE_MO_FILES=true
-  [ -z ${DEBUG_MODE+x} ] && export DEBUG_MODE=off
-  [ -z ${ZOPE_FORM_MEMORY_LIMIT+x} ] && export ZOPE_FORM_MEMORY_LIMIT=4MB
-  [ -z ${ZOPE_FORM_DISK_LIMIT+x} ] && export ZOPE_FORM_DISK_LIMIT=1GB
-  [ -z ${ZOPE_FORM_MEMFILE_LIMIT+x} ] && export ZOPE_FORM_MEMFILE_LIMIT=4KB
-
-
-  # ZODB ENV Vars
-  [ -z ${ZODB_CACHE_SIZE+x} ] && export ZODB_CACHE_SIZE=50000
-fi
-
-if [[ -v RELSTORAGE_DSN ]]; then
-  MSG="Using Relstorage configuration"
-  CONF=relstorage.conf
-  if [[ -z "$render_path" ]]; then
-    # Relstorage ENV Vars
-    [ -z ${RELSTORAGE_NAME+x} ] && export RELSTORAGE_NAME=storage
-    [ -z ${RELSTORAGE_READ_ONLY+x} ] && export RELSTORAGE_READ_ONLY=off
-    [ -z ${RELSTORAGE_KEEP_HISTORY+x} ] && export RELSTORAGE_KEEP_HISTORY=true
-    [ -z ${RELSTORAGE_COMMIT_LOCK_TIMEOUT+x} ] && export RELSTORAGE_COMMIT_LOCK_TIMEOUT=30
-    [ -z ${RELSTORAGE_CREATE_SCHEMA+x} ] && export RELSTORAGE_CREATE_SCHEMA=true
-    [ -z ${RELSTORAGE_SHARED_BLOB_DIR+x} ] && export RELSTORAGE_SHARED_BLOB_DIR=false
-    [ -z ${RELSTORAGE_BLOB_CACHE_SIZE+x} ] && export RELSTORAGE_BLOB_CACHE_SIZE=100mb
-    [ -z ${RELSTORAGE_BLOB_CACHE_SIZE_CHECK+x} ] && export RELSTORAGE_BLOB_CACHE_SIZE_CHECK=10
-    [ -z ${RELSTORAGE_BLOB_CACHE_SIZE_CHECK_EXTERNAL+x} ] && export RELSTORAGE_BLOB_CACHE_SIZE_CHECK_EXTERNAL=false
-    [ -z ${RELSTORAGE_BLOB_CHUNK_SIZE+x} ] && export RELSTORAGE_BLOB_CHUNK_SIZE=1048576
-    [ -z ${RELSTORAGE_CACHE_LOCAL_MB+x} ] && export RELSTORAGE_CACHE_LOCAL_MB=10
-    [ -z ${RELSTORAGE_CACHE_LOCAL_OBJECT_MAX+x} ] && export RELSTORAGE_CACHE_LOCAL_OBJECT_MAX=16384
-    [ -z ${RELSTORAGE_CACHE_LOCAL_COMPRESSION+x} ] && export RELSTORAGE_CACHE_LOCAL_COMPRESSION=none
-    [ -z ${RELSTORAGE_CACHE_DELTA_SIZE_LIMIT+x} ] && export RELSTORAGE_CACHE_DELTA_SIZE_LIMIT=100000
-  fi
-elif  [[ -v ZEO_ADDRESS ]]; then
-  MSG="Using ZEO configuration"
-  CONF=zeo.conf
-  if [[ -z "$render_path" ]]; then
-    # Check ZEO variables
-    [ -z ${ZEO_SHARED_BLOB_DIR+x} ] && export ZEO_SHARED_BLOB_DIR=off
-    [ -z ${ZEO_READ_ONLY+x} ] && export ZEO_READ_ONLY=false
-    [ -z ${ZEO_CLIENT_READ_ONLY_FALLBACK+x} ] && export ZEO_CLIENT_READ_ONLY_FALLBACK=false
-    [ -z ${ZEO_STORAGE+x} ] && export ZEO_STORAGE=1
-    [ -z ${ZEO_CLIENT_CACHE_SIZE+x} ] && export ZEO_CLIENT_CACHE_SIZE=128MB
-    [ -z ${ZEO_DROP_CACHE_RATHER_VERIFY+x} ] && export ZEO_DROP_CACHE_RATHER_VERIFY=false
-  fi
-else
-  MSG="Using default configuration"
-  CONF=zope.conf
-fi
-
-# Add anything inside etc/zope.conf.d to the configuration file
-# prior to starting the respective Zope server.
-# This provides a counterpart for the ZCML package-includes
-# functionality, but for Zope configuration snippets.
-#
-# This must be executed only once during the container lifetime,
-# as container can be stopped and then restarted... double-additions
-# of the same snippet cause the Zope server not to start.
-if grep -q '# Runtime customizations:' etc/${CONF} ; then
-  # Note in the log this was customized.  Useful for bug reports.
-  MSG="${MSG} -- with customizations"
-else
-  # Assume there will be no customizations.
-  zope_conf_vanilla=true
-  for f in etc/zope.conf.d/*.conf ; do
-    test -f ${f} || continue
-    # Oh, it looks like there is at least one customization.
-    if [[ -v zope_conf_vanilla ]] ; then
-      # Make a note both in the file and in the log.
-      echo >> etc/${CONF}
-      echo "# Runtime customizations:" >> etc/${CONF}
-      MSG="${MSG} -- with customizations"
-      # We don't need to rerun the same snippet twice here.
-      unset zope_conf_vanilla
-    fi
-    echo >> etc/${CONF}
-    cat ${f} >> etc/${CONF}
-  done
-fi
-
-# Handle CORS (rendered into the instance on the render path; the drop-in
-# helper script is legacy).
-if [[ -z "$render_path" ]]; then
-  $sudo $VENVBIN/python /app/scripts/cors.py
-fi
-
 # Handle ADDONS installation
 if [[ -n "${ADDONS}" ]]; then
   echo "======================================================================================="
@@ -194,82 +87,45 @@ site_banner() {
 }
 
 if [[ "$1" == "start" ]]; then
-  if [[ -n "$render_enabled" ]]; then
-    render_instance
-    if [[ -v SITE ]]; then
-      export TYPE=${TYPE:-volto}
-      export SITE_ID=${SITE}
-      site_banner
-      $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" /app/scripts/create_site.py
-    fi
-    echo "Starting Zope from the rendered instance in $CLIENT_HOME/instance"
-    exec $sudo $VENVBIN/runwsgi -v "$RENDERED_ETC/zope.ini"
-  fi
-  # Handle Site creation
+  render_instance
   if [[ -v SITE ]]; then
     export TYPE=${TYPE:-volto}
     export SITE_ID=${SITE}
     site_banner
-    $sudo $VENVBIN/zconsole run etc/${CONF} /app/scripts/create_site.py
+    $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" /app/scripts/create_site.py
   fi
-  echo $MSG
-  if [[ -v LISTEN_PORT ]] ; then
-    # Ensure the listen port can be set via container --environment.
-    # Necessary to run multiple backends in a single Podman / Kubernetes pod.
-    sed -i "s/port = 8080/port = ${LISTEN_PORT}/" etc/zope.ini
-  fi
-  exec $sudo $VENVBIN/runwsgi -v etc/zope.ini config_file=${CONF}
+  echo "Starting Zope from the rendered instance in $CLIENT_HOME/instance"
+  exec $sudo $VENVBIN/runwsgi -v "$RENDERED_ETC/zope.ini"
 elif [[ "$1" == "create-classic" || "$1" == "create-volto" || "$1" == "create-site" ]]; then
   case "$1" in
     create-classic) export TYPE=classic ;;
     create-volto) export TYPE=volto ;;
     create-site) export TYPE=${TYPE:-volto} ;;
   esac
-  if [[ -n "$render_path" ]]; then
-    render_instance
-    exec $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" /app/scripts/create_site.py
-  fi
-  exec $sudo $VENVBIN/zconsole run etc/${CONF} /app/scripts/create_site.py
+  render_instance
+  exec $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" /app/scripts/create_site.py
 elif [[ "$1" == "console" ]]; then
-  if [[ -n "$render_path" ]]; then
-    render_instance
-    exec $sudo $VENVBIN/zconsole debug "$RENDERED_ETC/zope.conf"
-  fi
-  exec $sudo $VENVBIN/zconsole debug etc/${CONF}
+  render_instance
+  exec $sudo $VENVBIN/zconsole debug "$RENDERED_ETC/zope.conf"
 elif [[ "$1" == "run" ]]; then
-  if [[ -n "$render_path" ]]; then
-    render_instance
-    exec $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" "${@:2}"
-  fi
-  exec $sudo $VENVBIN/zconsole run etc/${CONF} "${@:2}"
+  render_instance
+  exec $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" "${@:2}"
 elif [[ "$1" == "addzopeuser" ]]; then
-  if [[ -n "$render_path" ]]; then
-    render_instance
-    exec $sudo $VENVBIN/addzopeuser -c "$RENDERED_ETC/zope.conf" "${@:2}"
-  fi
-  exec $sudo $VENVBIN/addzopeuser -c etc/${CONF} "${@:2}"
+  render_instance
+  exec $sudo $VENVBIN/addzopeuser -c "$RENDERED_ETC/zope.conf" "${@:2}"
 elif [[ "$1" == "pack" ]]; then
-  if [[ -n "$render_path" ]]; then
-    render_instance
-    case "${INSTANCE_db_storage:-direct}" in
-      zeo)
-        exec $sudo $VENVBIN/zeopack "${@:2}" "${ZEO_ADDRESS:-$INSTANCE_db_zeo_server}"
-        ;;
-      relstorage)
-        exec $sudo $VENVBIN/zodbpack "${@:2}" "$RENDERED_ETC/relstorage-pack.conf"
-        ;;
-      *)
-        exec $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" /app/scripts/pack.py
-        ;;
-    esac
-  fi
-  if [[ -v ZEO_ADDRESS ]]; then
-    exec $sudo $VENVBIN/zeopack "${@:2}" ${ZEO_ADDRESS}
-  elif [[ -v RELSTORAGE_DSN ]]; then
-    exec $sudo $VENVBIN/zodbpack "${@:2}" etc/relstorage_pack.conf
-  else
-    exec $sudo $VENVBIN/zconsole run etc/${CONF} /app/scripts/pack.py
-  fi
+  render_instance
+  case "${INSTANCE_db_storage:-direct}" in
+    zeo)
+      exec $sudo $VENVBIN/zeopack "${@:2}" "${ZEO_ADDRESS:-$INSTANCE_db_zeo_server}"
+      ;;
+    relstorage)
+      exec $sudo $VENVBIN/zodbpack "${@:2}" "$RENDERED_ETC/relstorage-pack.conf"
+      ;;
+    *)
+      exec $sudo $VENVBIN/zconsole run "$RENDERED_ETC/zope.conf" /app/scripts/pack.py
+      ;;
+  esac
 elif [[ "$1" == "render" ]]; then
   render_instance
   exit 0

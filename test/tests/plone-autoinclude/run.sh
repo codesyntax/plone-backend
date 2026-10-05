@@ -23,7 +23,7 @@ trap cleanup EXIT
 docker run -d --name "$cname" -v "$sdir/helloworld:/app/src/helloworld" \
 	-e ADDONS="/app/src/helloworld" \
 	-e PIP_PARAMS="-q --disable-pip-version-check --no-build-isolation" \
-	-e PLONE_RENDER=on "$image" start > /dev/null
+	"$image" start > /dev/null
 
 get() {
 	docker run --rm -i \

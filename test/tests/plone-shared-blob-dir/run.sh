@@ -15,7 +15,7 @@ zid="$(docker run -d -v $zname:/data --name "$zname" plone/plone-zeo)"
 
 # Start Plone as ZEO Client
 pname="plone-container-$RANDOM-$RANDOM"
-pid="$(docker run -d -v $zname:/data -e ZEO_SHARED_BLOB_DIR=on -e PLONE_RENDER=on --name "${pname}" --link=$zname:zeo -e ZEO_ADDRESS=zeo:8100 "$image")"
+pid="$(docker run -d -v $zname:/data -e ZEO_SHARED_BLOB_DIR=on --name "${pname}" --link=$zname:zeo -e ZEO_ADDRESS=zeo:8100 "$image")"
 
 # Tear down
 trap "docker rm -vf $pid $zid > /dev/null" EXIT

@@ -86,7 +86,7 @@ PLONE_TEST_TRIES=10
 
 boot "plone-merge-mount-$RANDOM-$RANDOM" \
 	-v "$vname:/data" -v "$ufile:/app/instance.yaml:ro" \
-	-e CLIENT_HOME=/data/boot-mount -e PLONE_RENDER=on
+	-e CLIENT_HOME=/data/boot-mount
 . "$dir/../../retry.sh" --tries "$PLONE_TEST_TRIES" --sleep "$PLONE_TEST_SLEEP" check_root
 [[ "$(check_root)" == *"Welcome to Plone!"* ]]
 # Free /data's Data.fs before the second boot.
@@ -95,7 +95,7 @@ docker rm -vf "$cname" > /dev/null 2>&1 || true
 # 7. The server boots with INSTANCE_* overrides (no mounted file).
 boot "plone-merge-instance-$RANDOM-$RANDOM" \
 	-v "$vname:/data" \
-	-e CLIENT_HOME=/data/boot-instance -e PLONE_RENDER=on \
+	-e CLIENT_HOME=/data/boot-instance \
 	-e INSTANCE_wsgi_listen=0.0.0.0:8080
 . "$dir/../../retry.sh" --tries "$PLONE_TEST_TRIES" --sleep "$PLONE_TEST_SLEEP" check_root
 [[ "$(check_root)" == *"Welcome to Plone!"* ]]

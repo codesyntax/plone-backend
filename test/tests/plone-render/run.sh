@@ -66,7 +66,7 @@ PLONE_TEST_SLEEP=3
 PLONE_TEST_TRIES=10
 
 cname="plone-render-$RANDOM-$RANDOM"
-cid="$(docker run -d --name "$cname" -v "$vname:/data" -e CLIENT_HOME=/data/render-test -e PLONE_RENDER=on "$image" start)"
+cid="$(docker run -d --name "$cname" -v "$vname:/data" -e CLIENT_HOME=/data/render-test "$image" start)"
 
 get() {
 	docker run --rm -i \
@@ -84,7 +84,7 @@ get() {
 # 4. Boot the rendered instance as an arbitrary user with only /data writable.
 ucname="plone-render-user-$RANDOM-$RANDOM"
 docker run -d --user="$(id -u)" -v "$vuser:/data" --name "$ucname" \
-	-e CLIENT_HOME=/data/render-test -e PLONE_RENDER=on "$image" start > /dev/null
+	-e CLIENT_HOME=/data/render-test "$image" start > /dev/null
 
 get_user() {
 	docker run --rm -i \

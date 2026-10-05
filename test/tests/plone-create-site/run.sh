@@ -21,12 +21,12 @@ trap cleanup EXIT
 
 # Create the site with the create-site subcommand on the rendered instance.
 docker run --rm -v "$vname:/data" \
-	-e CLIENT_HOME=/data/client -e PLONE_RENDER=on -e SITE_ID="$site" \
+	-e CLIENT_HOME=/data/client -e SITE_ID="$site" \
 	"$image" create-site
 
 # Then boot the same instance and check the site is reachable.
 docker run -d --name "$cname" -v "$vname:/data" \
-	-e CLIENT_HOME=/data/client -e PLONE_RENDER=on "$image" start > /dev/null
+	-e CLIENT_HOME=/data/client "$image" start > /dev/null
 
 get() {
 	docker run --rm -i \

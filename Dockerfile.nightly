@@ -78,7 +78,6 @@ RUN /app/render/setup.sh plone:plone
 
 RUN <<EOT
     set -e
-    ln -s /data var
     find /data  -not -user plone -exec chown plone:plone {} \+
     find /app -not -user plone -exec chown plone:plone {} \+
 EOT

@@ -41,11 +41,9 @@ RUN <<EOT
     find /app \( -type f -a -name '*.pyc' -o -name '*.pyo' \) -exec rm -rf '{}' +
 EOT
 
-# Copy default structure for a Plone Project
-COPY /skeleton/etc /app/etc
+# Copy the entrypoint and helper scripts
 COPY /skeleton/scripts /app/scripts
 COPY /skeleton/docker-entrypoint.sh /app/
-COPY /skeleton/inituser /app/
 
 # Bake the render tooling used to generate the Zope instance at container start.
 # The default instance.yaml and, on later tickets, the in-repo legacy shim are

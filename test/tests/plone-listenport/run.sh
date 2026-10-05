@@ -9,7 +9,7 @@ PLONE_TEST_SLEEP=3
 PLONE_TEST_TRIES=5
 
 cname="plone-container-$RANDOM-$RANDOM"
-cid="$(docker run -d --name "$cname" -e PLONE_RENDER=on -e LISTEN_PORT=8081 "$image")"
+cid="$(docker run -d --name "$cname" -e LISTEN_PORT=8081 "$image")"
 trap "docker rm -vf $cid > /dev/null" EXIT
 
 get() {

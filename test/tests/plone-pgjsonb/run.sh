@@ -15,7 +15,6 @@ zid="$(docker run -d --name "$zname" -e POSTGRES_USER=plone -e POSTGRES_PASSWORD
 # Start Plone with PGJsonb storage (INSTANCE_* only, no legacy variables)
 pname="plone-pgjsonb-$RANDOM-$RANDOM"
 pid="$(docker run -d --name "$pname" --link=$zname:db \
-	-e PLONE_RENDER=on \
 	-e INSTANCE_db_storage=pgjsonb \
 	-e INSTANCE_db_pgjsonb_dsn="postgresql://plone:plone@db:5432/plone" \
 	"$image")"
