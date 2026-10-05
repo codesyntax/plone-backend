@@ -100,7 +100,7 @@ image-main:  ## Build main image
 .PHONY: image-nightly
 image-nightly:  ## Build Docker Image Nightly
 	@echo "Building $(MAIN_IMAGE_NAME):$(NIGHTLY_IMAGE_TAG)"
-	@docker buildx build . --no-cache --build-arg PYTHON_VERSION=${PYTHON_VERSION} -t $(MAIN_IMAGE_NAME):$(NIGHTLY_IMAGE_TAG) -f Dockerfile.nightly --load
+	@docker buildx build . --no-cache --build-arg PYTHON_VERSION=${PYTHON_VERSION} --build-arg COOKIECUTTER_ZOPE_INSTANCE_VERSION=${COOKIECUTTER_ZOPE_INSTANCE_VERSION} -t $(MAIN_IMAGE_NAME):$(NIGHTLY_IMAGE_TAG) -f Dockerfile.nightly --load
 
 .PHONY: build-images
 build-images:  ## Build Images

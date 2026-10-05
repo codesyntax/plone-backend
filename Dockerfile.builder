@@ -5,7 +5,7 @@ FROM python:${PYTHON_VERSION}-slim-bookworm
 ARG PLONE_VERSION
 ARG COOKIECUTTER_ZOPE_INSTANCE_VERSION=3.1.0
 
-ENV EXTRA_PACKAGES="relstorage==4.1.1 psycopg2==2.9.10 python-ldap==3.4.4 ZEO"
+ENV EXTRA_PACKAGES="relstorage==4.1.1 psycopg2==2.9.10 python-ldap==3.4.4 ZEO zodb-pgjsonb==1.16.2 zodb-s3blobs==1.1.0"
 
 
 LABEL maintainer="Plone Community <dev@plone.org>" \

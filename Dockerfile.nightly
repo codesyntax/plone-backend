@@ -5,7 +5,7 @@ FROM base AS builder
 
 ENV PIP_PARAMS=""
 ENV PIP_VERSION=26.1.2
-ENV EXTRA_PACKAGES="relstorage==4.3.0 psycopg2==2.9.12 python-ldap==3.4.7"
+ENV EXTRA_PACKAGES="relstorage==4.3.0 psycopg2==2.9.12 python-ldap==3.4.7 zodb-pgjsonb==1.16.2 zodb-s3blobs==1.1.0"
 
 RUN mkdir /wheelhouse
 
@@ -37,6 +37,7 @@ FROM base
 
 ENV PIP_PARAMS=""
 ENV PIP_VERSION=26.1.2
+ARG COOKIECUTTER_ZOPE_INSTANCE_VERSION=3.1.0
 
 LABEL maintainer="Plone Community <dev@plone.org>" \
       org.label-schema.name="plone-backend" \
@@ -48,7 +49,7 @@ COPY --from=builder /wheelhouse /wheelhouse
 RUN <<EOT
     set -e
     useradd --system -m -d /app -U -u 500 plone
-    runDeps="git libjpeg62 libopenjp2-7 libpq5 libtiff6 libxml2 libxslt1.1 lynx netcat-openbsd poppler-utils rsync wv busybox libmagic1 gosu make"
+    runDeps="git libjpeg62 libopenjp2-7 libpq5 libtiff6 libxml2 libxslt1.1 lynx netcat-openbsd poppler-utils rsync wv busybox libmagic1 gosu make curl"
     apt-get update
     apt-get install -y --no-install-recommends $runDeps
     busybox --install -s
@@ -68,6 +69,34 @@ RUN <<EOT
 EOT
 
 COPY skeleton/ /app
+
+# Bake the render tooling used to generate the Zope instance at container start
+# (self-contained equivalent of the server-builder setup).
+COPY /render /app/render
+
+RUN <<EOT
+    set -e
+    python -m venv /app/render/venv
+    /app/render/venv/bin/pip install -U pip wheel
+    /app/render/venv/bin/pip install cookiecutter pyyaml
+    curl -L --fail -o /app/render/cookiecutter-zope-instance.zip \
+        "https://github.com/plone/cookiecutter-zope-instance/archive/refs/tags/${COOKIECUTTER_ZOPE_INSTANCE_VERSION}.zip"
+    curl -L --fail -o /app/render/transform_from_environment.py \
+        "https://raw.githubusercontent.com/plone/cookiecutter-zope-instance/${COOKIECUTTER_ZOPE_INSTANCE_VERSION}/helpers/transform_from_environment.py"
+    cd /app/render
+    ./venv/bin/python transform_from_environment.py \
+        -i /app/render/instance-default.yaml \
+        -o /app/render/instance-from-environment.yaml
+    ./venv/bin/cookiecutter -f --no-input \
+        --config-file /app/render/instance-from-environment.yaml \
+        /app/render/cookiecutter-zope-instance.zip \
+        -o /app/render/smoke-render
+    test -f /app/render/smoke-render/instance/etc/zope.conf
+    test -f /app/render/smoke-render/instance/etc/zope.ini
+    test -f /app/render/smoke-render/instance/etc/site.zcml
+    test -f /app/render/smoke-render/instance/inituser
+    rm -rf /app/render/smoke-render /app/render/instance-from-environment.yaml
+EOT
 
 RUN <<EOT
     set -e

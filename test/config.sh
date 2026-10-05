@@ -17,7 +17,9 @@ plone-arbitrary-user
 plone-listenport
 plone-zeoclient
 plone-relstorage
+plone-pgjsonb
 plone-shared-blob-dir
+plone-z3blobs
 plone-render
 plone-legacy-shim
 plone-merge
