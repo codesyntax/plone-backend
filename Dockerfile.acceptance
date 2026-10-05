@@ -26,17 +26,11 @@ COPY --from=builder --chown=500:500 /app /app
 # it bypasses the runtime wrapper. Render from the acceptance-specific instance.yaml.
 RUN <<EOT
     set -e
-    cd /app/render
-    ./venv/bin/python transform_from_environment.py \
-        -i acceptance-instance.yaml -o acceptance-from-environment.yaml
-    ./venv/bin/cookiecutter -f --no-input \
-        --config-file acceptance-from-environment.yaml \
-        cookiecutter-zope-instance.zip -o /app
+    /app/render/bake.sh /app/render/acceptance-instance.yaml /app
     test -f /app/instance/etc/zope.conf
     test -f /app/instance/etc/zope.ini
     test -f /app/instance/etc/site.zcml
     test -f /app/instance/etc/cors.zcml
-    rm -f acceptance-from-environment.yaml
     chown -R 500:500 /app/instance
 EOT
 

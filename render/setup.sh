@@ -16,18 +16,12 @@ curl -L --fail -o /app/render/cookiecutter-zope-instance.zip \
 curl -L --fail -o /app/render/transform_from_environment.py \
     "https://raw.githubusercontent.com/plone/cookiecutter-zope-instance/${COOKIECUTTER_ZOPE_INSTANCE_VERSION}/helpers/transform_from_environment.py"
 
-cd /app/render
-./venv/bin/python transform_from_environment.py \
-    -i /app/render/instance-default.yaml \
-    -o /app/render/instance-from-environment.yaml
-./venv/bin/cookiecutter -f --no-input \
-    --config-file /app/render/instance-from-environment.yaml \
-    /app/render/cookiecutter-zope-instance.zip \
-    -o /app/render/smoke-render
+# Smoke-render the baked default so a broken template fails the build.
+/app/render/bake.sh /app/render/instance-default.yaml /app/render/smoke-render
 test -f /app/render/smoke-render/instance/etc/zope.conf
 test -f /app/render/smoke-render/instance/etc/zope.ini
 test -f /app/render/smoke-render/instance/etc/site.zcml
 test -f /app/render/smoke-render/instance/inituser
-rm -rf /app/render/smoke-render /app/render/instance-from-environment.yaml
+rm -rf /app/render/smoke-render
 
 chown -R "$OWNER" /app/render
