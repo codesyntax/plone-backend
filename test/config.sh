@@ -25,6 +25,7 @@ plone-legacy-shim
 plone-merge
 plone-pack
 plone-subcommands
+plone-offline-render
 '
 
 imageTests+=(
