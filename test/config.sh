@@ -32,6 +32,7 @@ imageTests+=(
 	[ghcr.io/plone/plone-backend]=$imageTests_main_set
 	[plone/plone-classicui]=plone-classicui
 	[ghcr.io/plone/plone-classicui]=plone-classicui
+	[plone/server-acceptance]=acceptance
 )
 
 globalExcludeTests+=(

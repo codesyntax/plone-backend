@@ -1,0 +1,61 @@
+# instance.yaml baked into the acceptance image at build time.
+#
+# The acceptance image's entrypoint is robot-server, which bypasses the runtime
+# entrypoint wrapper, so its instance is rendered during the image build instead.
+default_context:
+    # --- locations ---
+    target: instance
+    location_clienthome: /data
+    environment:
+        zope_i18n_compile_mo_files: "true"
+        CHAMELEON_CACHE: /data/cache
+    environment_paths:
+        - CHAMELEON_CACHE
+
+    # --- wsgi: robot tests expect port 55001 ---
+    wsgi_listen: 0.0.0.0:55001
+    wsgi_threads: 2
+    wsgi_max_request_body_size: 1073741824
+    wsgi_clear_untrusted_proxy_headers: false
+
+    # --- logging (12-factor stdout/stderr) ---
+    log_level: INFO
+    log_stdout: true
+    log_stdout_stream: stderr
+    access_log_enabled: true
+    logging_loggers:
+        plone: INFO
+        waitress.queue: INFO
+        waitress: INFO
+
+    # --- security / debug / DoS ---
+    debug_mode: false
+    verbose_security: false
+    dos_protection_available: true
+    dos_protection_form_memory_limit: 4MB
+    dos_protection_form_disk_limit: 1GB
+    dos_protection_form_memfile_limit: 4KB
+    dos_protection_form_part_limit: 1024
+
+    # --- initial user ---
+    initial_user_name: admin
+    initial_user_password: admin
+
+    # --- storage: direct filestorage under /data ---
+    db_storage: direct
+    db_cache_size: 50000
+    db_blob_mode: shared
+    db_blob_location: /data/blobstorage
+    db_filestorage_location: /data/filestorage/Data.fs
+
+    # --- CORS on; robot tests talk to the API from another origin ---
+    cors_enabled: true
+    cors_allow_credentials: true
+    cors_allow_origin: "http://localhost:3000,http://127.0.0.1:3000"
+    cors_allow_methods: "DELETE,GET,OPTIONS,PATCH,POST,PUT"
+    cors_allow_headers: "Accept,Authorization,Content-Type,X-Custom-Header,Lock-Token"
+    cors_expose_headers: "Content-Length,X-My-Header"
+    cors_max_age: 3600
+
+    # --- ZCML: mirrors the acceptance CONFIGURE_PACKAGES ---
+    zcml_package_includes: "plone.app.contenttypes,plone.restapi,plone.volto,plone.volto.cors"

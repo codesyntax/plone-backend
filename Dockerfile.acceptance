@@ -22,8 +22,26 @@ LABEL maintainer="Plone Community <dev@plone.org>" \
 # Copy /app from builder
 COPY --from=builder --chown=500:500 /app /app
 
-# Set chameleon cache directory
-ENV CHAMELEON_CACHE=/app/var/cache
+# Bake the acceptance instance at build time: robot-server is the entrypoint, so
+# it bypasses the runtime wrapper. Render from the acceptance-specific instance.yaml.
+RUN <<EOT
+    set -e
+    cd /app/render
+    ./venv/bin/python transform_from_environment.py \
+        -i acceptance-instance.yaml -o acceptance-from-environment.yaml
+    ./venv/bin/cookiecutter -f --no-input \
+        --config-file acceptance-from-environment.yaml \
+        cookiecutter-zope-instance.zip -o /app
+    test -f /app/instance/etc/zope.conf
+    test -f /app/instance/etc/zope.ini
+    test -f /app/instance/etc/site.zcml
+    test -f /app/instance/etc/cors.zcml
+    rm -f acceptance-from-environment.yaml
+    chown -R 500:500 /app/instance
+EOT
+
+# Set chameleon cache directory under /data (the obsolete /app/var symlink is gone)
+ENV CHAMELEON_CACHE=/data/cache
 # Zope listens to all ip addresses
 ENV ZSERVER_HOST=0.0.0.0
 # Zope port to be 55001
@@ -34,8 +52,6 @@ ENV LISTEN_PORT=${ZSERVER_PORT}
 ENV APPLY_PROFILES=plone.app.contenttypes:plone-content,plone.restapi:default,plone.volto:default
 # Packages to be used in configuration
 ENV CONFIGURE_PACKAGES=plone.app.contenttypes,plone.restapi,plone.volto,plone.volto.cors
-
-RUN ln -s /data /app/var
 
 # Also expose port 55001
 EXPOSE 55001

@@ -71,6 +71,15 @@ jobs:
           tags: |
             type=sha
 
+      - name: Acceptance Image
+        id: meta-acceptance
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            plone/server-acceptance
+          tags: |
+            type=sha
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -118,8 +127,23 @@ jobs:
           build-args: |
             PLONE_VERSION=${{ needs.meta.outputs.SHA }}
 
+      - name: Build acceptance image for testing
+        uses: docker/build-push-action@v4
+        with:
+          context: ./
+          file: Dockerfile.acceptance
+          tags: ${{ steps.meta-acceptance.outputs.tags }}
+          push: true
+          build-args: |
+            PLONE_VERSION=${{ needs.meta.outputs.SHA }}
+
       - name: Test
         run: |
           docker pull ${{ steps.meta-main.outputs.tags }}
           docker pull ${{ steps.meta-classicui.outputs.tags }}
           ./test/run.sh  ${{ steps.meta-main.outputs.tags }} ${{ steps.meta-classicui.outputs.tags }}
+
+      - name: Test acceptance
+        run: |
+          docker pull ${{ steps.meta-acceptance.outputs.tags }}
+          ./test/run.sh -t acceptance ${{ steps.meta-acceptance.outputs.tags }}
