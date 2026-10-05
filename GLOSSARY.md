@@ -37,8 +37,10 @@ pinned template archive, the transform and legacy-shim helpers, and the default
 _Avoid_: toolchain, build tools
 
 **Skeleton**:
-The legacy static configuration tree (`skeleton/`) and its shell backend selection,
-which the render path replaces.
+The legacy static configuration tree (`skeleton/etc`) and its shell backend
+selection. The configuration tree and the shell selection were removed by this
+migration (the `skeleton/` directory now holds only `docker-entrypoint.sh` and the
+helper scripts), which the render path replaces.
 _Avoid_: template (that is the cookiecutter template)
 
 **server-builder** and **server-prod-config**:

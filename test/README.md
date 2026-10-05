@@ -6,18 +6,18 @@
 $ ./run.sh
 
 usage: run.sh [-t test ...] image:tag [...]
-   ie: run.sh plone/plone-backend:6.0.0a1
-       run.sh -t utc plone/plone-backend:6.0.0a1
+   ie: run.sh plone/plone-backend:6.2.2
+       run.sh -t utc plone/plone-backend:6.2.2
 
 This script processes the specified Docker images to test their running
 environments.
 ```
 
-Run all the tests that are applicable to the `plone/plone-backend:6.0.0a1` image:
+Run all the tests that are applicable to the `plone/plone-backend:6.2.2` image:
 
 ```console
-$ ./run.sh plone/plone-backend:6.0.0a1
-testing plone/plone-backend:6.0.0a1
+$ ./run.sh plone/plone-backend:6.2.2
+testing plone/plone-backend:6.2.2
 	'utc' [1/4]...passed
 	'no-hard-coded-passwords' [2/4]...passed
 	'override-cmd' [3/4]...passed
@@ -44,7 +44,10 @@ docker run --rm --entrypoint date "$1" +%Z
 
 Which runs `date` inside the given image, and outputs the current timezone according to `date +%Z`, which should be `UTC`. See `tests/<test name>/expected-std-out.txt` below for the other half of this test.
 
-There are several pre-written `run.sh` scripts to help with common tasks. See the `tests/run-*-in-container.sh` section below for more details about these.
+There is no shared helper library; see the other `tests/<name>/run.sh` scripts for common
+patterns (booting a container and `curl`-ing it, `retry.sh` to wait for readiness, and
+shared/`--link`ed service containers). `test/config.sh` maps each test to the images it
+applies to, including `plone/server-acceptance` (run with `-t acceptance`).
 
 #### `tests/<test name>/expected-std-out.txt`
 
@@ -57,8 +60,8 @@ To continue with our `utc` test example, its contents in this file are simply:
 If a test fails due to having incorrect output, the `diff` between the generated output and the expected output will be displayed:
 
 ```console
-$ ./run.sh -t utc plone/plone-backend:6.0.0a1
-testing plone/plone-backend:6.0.0a1
+$ ./run.sh -t utc plone/plone-backend:6.2.2
+testing plone/plone-backend:6.2.2
 	'utc' [1/1]...failed; unexpected output:
 --- tests/utc/expected-std-out.txt	2015-02-05 16:52:05.013273118 -0700
 +++ -	2015-03-13 15:11:49.725116569 -0600
@@ -67,7 +70,7 @@ testing plone/plone-backend:6.0.0a1
 +EDT
 ```
 
-(this is an example of `plone/plone-backend:6.0.0a1` failing the `utc` test)
+(this is an example of `plone/plone-backend:6.2.2` failing the `utc` test)
 
 ## Configuring the Test Suite
 

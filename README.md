@@ -29,7 +29,10 @@ These images are **not** Buildout based!
 | --- | --- | --- |
 | 6 | `6.0.15`, `6.0` | [(6.0.x/Dockerfile)](https://github.com/plone/container-backend/blob/v6.0.15/Dockerfile)|
 | 6.1 | `6.1.5`, `6.1` | [(6.1.x/Dockerfile)](https://github.com/plone/container-backend/blob/v6.1.5/Dockerfile)|
-| 6.2 | `6.2.2`, `6.2`, `6`, `latest` | [(6.2.x/Dockerfile)](https://github.com/plone/container-backend/blob/v6.2.1/Dockerfile)|
+| 6.2 | `6.2.2`, `6.2`, `6`, `latest` | [(6.2.x/Dockerfile)](https://github.com/plone/container-backend/blob/v6.2.2/Dockerfile)|
+
+A new configuration model is available under the opt-in experimental tag `6.2.2-cczi`
+(see [Possible breaking changes](#possible-breaking-changes-new-configuration-model) below).
 
 **Possible breaking changes in upcoming Plone 6.2 dependencies**
 
