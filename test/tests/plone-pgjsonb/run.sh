@@ -35,3 +35,7 @@ get() {
 
 # Plone is up and running from the pgjsonb storage
 [[ "$(get 'http://plone:8080')" == *"Welcome to Plone!"* ]]
+
+# The pgjsonb storage created its tables in PostgreSQL.
+docker exec "$zname" psql -U plone -d plone -tAc \
+	"select to_regclass('public.object_state')" | grep -q 'object_state'
